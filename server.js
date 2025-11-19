@@ -22,7 +22,9 @@ const BASE_URL = "https://school-erp-zhpk.onrender.com/uploads/";
 // ------------------------------------------------------
 //  CONNECT MYSQL (Railway ENV Variables)
 // ------------------------------------------------------
-const db = mysql.createPool({
+const mysql = require("mysql");
+
+const db = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
@@ -30,14 +32,15 @@ const db = mysql.createPool({
     port: process.env.DB_PORT
 });
 
-db.getConnection((err, c) => {
+db.connect((err) => {
     if (err) {
-        console.log("MySQL Error:", err);
+        console.log("DB Connection Error:", err);
     } else {
-        console.log("Connected to Railway MySQL");
-        c.release();
+        console.log("MySQL Connected Successfully!");
     }
 });
+
+module.exports = db;
 
 
 // ------------------------------------------------------
@@ -177,3 +180,4 @@ app.post("/upload_timetable", upload.single("pdf"), (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on Render");
 });
+
