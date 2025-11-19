@@ -1,6 +1,7 @@
 // ------------------------------------------------------
 //  IMPORTS
 // ------------------------------------------------------
+require("dotenv").config(); 
 const express = require("express");
 const mysql = require("mysql2");
 const multer = require("multer");
@@ -178,5 +179,6 @@ app.post("/upload_timetable", upload.single("pdf"), (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on Render");
 });
+
 
 
