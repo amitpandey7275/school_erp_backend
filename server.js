@@ -23,11 +23,11 @@ const BASE_URL = "https://school-erp-zhpk.onrender.com/uploads/";
 //  CONNECT MYSQL (Railway ENV Variables)
 // ------------------------------------------------------
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT
 });
 
 db.connect((err) => {
@@ -176,3 +176,4 @@ app.post("/upload_timetable", upload.single("pdf"), (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on Render");
 });
+
