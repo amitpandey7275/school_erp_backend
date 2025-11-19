@@ -19,6 +19,14 @@ const db = mysql.createConnection({
     port: process.env.MYSQLPORT
 });
 
+
+console.log("DEBUG => MYSQLHOST =", process.env.MYSQLHOST);
+console.log("DEBUG => MYSQLPORT =", process.env.MYSQLPORT);
+console.log("DEBUG => MYSQLUSER =", process.env.MYSQLUSER);
+console.log("DEBUG => MYSQLPASSWORD =", process.env.MYSQLPASSWORD);
+console.log("DEBUG => MYSQLDATABASE =", process.env.MYSQLDATABASE);
+
+
 db.connect(err => {
     if (err) {
         console.log("DB Connection Error:", err);
@@ -114,3 +122,4 @@ app.post("/add_teacher", (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
