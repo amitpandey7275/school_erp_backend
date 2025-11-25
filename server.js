@@ -14,10 +14,6 @@ const supabase = createClient(
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rZ2twdHhxc3JvZ2FpZXhmdXZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTMxNzEsImV4cCI6MjA3OTI4OTE3MX0.9x2JU_AEApbIYS4477rhk9IhJ-MO-zCMylHFIoqpnXo"
 );
 
-// ----------------------- MULTER CONFIG ----------------------------
-const upload = multer({
-    storage: multer.memoryStorage()   // <-- STORAGE in memory (NO local folder)
-});
 
 
 
@@ -214,6 +210,10 @@ app.get("/get_notices", async (req, res) => {
     res.json(data);
 });
 
+// ----------------------- MULTER CONFIG ----------------------------
+const upload = multer({
+    storage: multer.memoryStorage()   // <-- STORAGE in memory (NO local folder)
+});
 
 
 
@@ -275,5 +275,6 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
 
