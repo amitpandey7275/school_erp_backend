@@ -297,7 +297,7 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 
             const fileName = Date.now() + "_" + file.originalname;
 
-            // 1. Upload to Supabase Storage
+            // 1. Upload to Supabase Storage Bucket
             const { data: storageData, error: storageError } = await supabase.storage
                 .from("gallery")
                 .upload(fileName, file.buffer, {
@@ -309,7 +309,7 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
                 return res.status(500).json({ error: "Storage upload failed" });
             }
 
-            // 2. Get public URL
+            // 2. Public URL
             const { data: urlData } = supabase.storage
                 .from("gallery")
                 .getPublicUrl(fileName);
@@ -320,9 +320,9 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
             });
         }
 
-        // 3. Insert URLs into database
+        // 3. Insert URLs into NEW TABLE
         const { error: dbError } = await supabase
-            .from("gallery")
+            .from("gallery_image")
             .insert(uploadedImages);
 
         if (dbError) return res.status(500).json({ error: dbError.message });
@@ -337,10 +337,12 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 
 
 
+
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
 
 
