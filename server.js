@@ -6,7 +6,7 @@ const { createClient } = require("@supabase/supabase-js");
 const app = express();
 
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));   // Image/PDF folder
+app.use("/uploads", express.static("uploads"));  
 
 
 
@@ -17,11 +17,14 @@ const supabase = createClient(
 );
 
 
+// ----------------------- MULTER FIXED CONFIG ----------------------------
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 }  // 20 MB
+});
 
 
-
-
-// ----------------------- REGISTER USER (Admin/Teacher/Student/Common) ----------------------------
+// ----------------------- REGISTER USER ----------------------------
 app.post("/register", async (req, res) => {
     const { name, email, password, role } = req.body;
 
@@ -68,13 +71,6 @@ app.post("/get_role", async (req, res) => {
 });
 
 
-// ----------------------- MULTER CONFIG ----------------------------
-const upload = multer({
-    storage: multer.memoryStorage()
-});
-
-
-
 // ----------------------- ADD STUDENT ----------------------------
 app.post("/add_student", async (req, res) => {
     const { name, email, password, cls, phone } = req.body;
@@ -104,34 +100,31 @@ app.post("/add_student", async (req, res) => {
 });
 
 
-
-// ----------------------- get_student profile ----------------------------
+// ----------------------- STUDENT PROFILE ----------------------------
 app.get("/get_student_profile", async (req, res) => {
-  const uid = req.query.auth_uid;
+    const uid = req.query.auth_uid;
 
-  const { data, error } = await supabase
-    .from("students")
-    .select("*")
-    .eq("auth_uid", uid)
-    .single();
+    const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("auth_uid", uid)
+        .single();
 
-  if (error) return res.json({ error: error.message });
+    if (error) return res.json({ error: error.message });
 
-  res.json(data);
+    res.json(data);
 });
 
 
-
-
-
+// ----------------------- UPDATE STUDENT PHOTO ----------------------------
 app.post("/update_student_photo", upload.single("image"), async (req, res) => {
     const file = req.file;
     const uid = req.body.auth_uid;
 
     if (!file) return res.json({ error: "Image is required" });
 
-    // Upload to Supabase Storage
     const fileName = `students/${Date.now()}-${file.originalname}`;
+
     const { data, error } = await supabase.storage
         .from("student-photos")
         .upload(fileName, file.buffer, {
@@ -141,14 +134,12 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
 
     if (error) return res.json({ error: error.message });
 
-    // Public URL
     const { data: urlData } = supabase.storage
         .from("student-photos")
         .getPublicUrl(fileName);
 
     const imageUrl = urlData.publicUrl;
 
-    // Update database
     const { error: updateErr } = await supabase
         .from("students")
         .update({ profile_image_url: imageUrl })
@@ -156,10 +147,7 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
 
     if (updateErr) return res.json({ error: updateErr.message });
 
-    res.json({
-        success: true,
-        profile_image_url: imageUrl
-    });
+    res.json({ success: true, profile_image_url: imageUrl });
 });
 
 
@@ -281,10 +269,7 @@ app.get("/get_notices", async (req, res) => {
 });
 
 
-
-
-
-//------------------Gallery--------------------
+// ----------------------- FIXED GALLERY UPLOAD ----------------------------
 app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
@@ -297,11 +282,11 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 
             const fileName = Date.now() + "_" + file.originalname;
 
-            // 1. Upload to Supabase Storage Bucket
             const { data: storageData, error: storageError } = await supabase.storage
                 .from("gallery")
                 .upload(fileName, file.buffer, {
                     contentType: file.mimetype,
+                    upsert: true
                 });
 
             if (storageError) {
@@ -309,7 +294,6 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
                 return res.status(500).json({ error: "Storage upload failed" });
             }
 
-            // 2. Public URL
             const { data: urlData } = supabase.storage
                 .from("gallery")
                 .getPublicUrl(fileName);
@@ -320,14 +304,20 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
             });
         }
 
-        // 3. Insert URLs into NEW TABLE
         const { error: dbError } = await supabase
-            .from("gallery_image")
+            .from("gallery_images")
             .insert(uploadedImages);
 
-        if (dbError) return res.status(500).json({ error: dbError.message });
+        if (dbError) {
+            console.log("DB Error:", dbError);
+            return res.status(500).json({ error: dbError.message });
+        }
 
-        res.json({ message: "Gallery Uploaded!", images: uploadedImages });
+        res.json({
+            success: true,
+            message: "Gallery Uploaded Successfully!",
+            images: uploadedImages
+        });
 
     } catch (err) {
         console.log(err);
@@ -336,16 +326,7 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 });
 
 
-
-
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
-
-
-
-
-
-
-
