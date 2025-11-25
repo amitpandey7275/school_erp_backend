@@ -104,6 +104,22 @@ app.post("/add_student", async (req, res) => {
 });
 
 
+
+// ----------------------- get_student profile ----------------------------
+app.get("/get_student_profile", async (req, res) => {
+  const uid = req.query.auth_uid;
+
+  const { data, error } = await supabase
+    .from("students")
+    .select("*")
+    .eq("auth_uid", uid)
+    .single();
+
+  if (error) return res.json({ error: error.message });
+
+  res.json(data);
+});
+
 // ----------------------- ADD TEACHER ----------------------------
 app.post("/add_teacher", async (req, res) => {
     const { name, email, password, phone } = req.body;
@@ -282,6 +298,7 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
 
 
