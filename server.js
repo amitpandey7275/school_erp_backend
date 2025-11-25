@@ -15,13 +15,10 @@ const supabase = createClient(
 );
 
 // ----------------------- MULTER CONFIG ----------------------------
-const storage = multer.diskStorage({
-    destination: "uploads/",
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
+const upload = multer({
+    storage: multer.memoryStorage()   // <-- STORAGE in memory (NO local folder)
 });
-const upload = multer({ storage });
+
 
 
 // ----------------------- REGISTER USER (Admin/Teacher/Student/Common) ----------------------------
@@ -278,4 +275,5 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
