@@ -120,6 +120,49 @@ app.get("/get_student_profile", async (req, res) => {
   res.json(data);
 });
 
+
+
+
+
+app.post("/update_student_photo", upload.single("image"), async (req, res) => {
+    const file = req.file;
+    const uid = req.body.auth_uid;
+
+    if (!file) return res.json({ error: "Image is required" });
+
+    // Upload to Supabase Storage
+    const fileName = `students/${Date.now()}-${file.originalname}`;
+    const { data, error } = await supabase.storage
+        .from("student-photos")
+        .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+        });
+
+    if (error) return res.json({ error: error.message });
+
+    // Public URL
+    const { data: urlData } = supabase.storage
+        .from("student-photos")
+        .getPublicUrl(fileName);
+
+    const imageUrl = urlData.publicUrl;
+
+    // Update database
+    const { error: updateErr } = await supabase
+        .from("students")
+        .update({ profile_image_url: imageUrl })
+        .eq("auth_uid", uid);
+
+    if (updateErr) return res.json({ error: updateErr.message });
+
+    res.json({
+        success: true,
+        profile_image_url: imageUrl
+    });
+});
+
+
 // ----------------------- ADD TEACHER ----------------------------
 app.post("/add_teacher", async (req, res) => {
     const { name, email, password, phone } = req.body;
@@ -298,6 +341,7 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
 
 
