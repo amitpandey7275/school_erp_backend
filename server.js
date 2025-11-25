@@ -218,7 +218,64 @@ app.get("/get_notices", async (req, res) => {
 });
 
 
+
+
+
+//------------------Gallery--------------------
+app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "Images missing" });
+        }
+
+        let uploadedImages = [];
+
+        for (const file of req.files) {
+
+            const fileName = Date.now() + "_" + file.originalname;
+
+            // 1. Upload to Supabase Storage
+            const { data: storageData, error: storageError } = await supabase.storage
+                .from("gallery")
+                .upload(fileName, file.buffer, {
+                    contentType: file.mimetype,
+                });
+
+            if (storageError) {
+                console.log(storageError);
+                return res.status(500).json({ error: "Storage upload failed" });
+            }
+
+            // 2. Get public URL
+            const { data: urlData } = supabase.storage
+                .from("gallery")
+                .getPublicUrl(fileName);
+
+            uploadedImages.push({
+                imageUrl: urlData.publicUrl,
+                time: Date.now()
+            });
+        }
+
+        // 3. Insert URLs into database
+        const { error: dbError } = await supabase
+            .from("gallery")
+            .insert(uploadedImages);
+
+        if (dbError) return res.status(500).json({ error: dbError.message });
+
+        res.json({ message: "Gallery Uploaded!", images: uploadedImages });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
+
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
