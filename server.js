@@ -172,6 +172,31 @@ app.post("/add_teacher", async (req, res) => {
 });
 
 
+
+// =============================
+// GET TEACHER PROFILE
+// =============================
+app.get("/getTeacherProfile", async (req, res) => {
+    try {
+        const uid = req.query.uid;
+
+        const { data, error } = await supabase
+            .from("teachers")
+            .select("*")
+            .eq("uid", uid)
+            .single();
+
+        if (error || !data) {
+            return res.json({ success: false, message: "Teacher not found" });
+        }
+
+        return res.json(data);
+
+    } catch (err) {
+        return res.json({ success: false, message: err.message });
+    }
+});
+
 // ----------------------- ADD COMMON USER ----------------------------
 app.post("/add_common_user", async (req, res) => {
     const { name, email, password, phone } = req.body;
@@ -350,4 +375,5 @@ app.post("/uploadHomework", async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
