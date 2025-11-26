@@ -326,7 +326,28 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 });
 
 
+//.....................upload Homwork.....................
+app.post("/uploadHomework", async (req, res) => {
+    try {
+        const { class_name, subject, homework_text, teacher_id } = req.body;
+
+        const { data, error } = await supabase
+            .from("homework")
+            .insert([{ class_name, subject, homework_text, teacher_id }]);
+
+        if (error) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.json({ success: true, message: "Homework uploaded", data });
+
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
