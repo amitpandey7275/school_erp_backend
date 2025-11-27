@@ -325,35 +325,57 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
     try {
         const { title, description, class_name, section_name, subject } = req.body;
 
-        if (!req.file) return res.status(400).json({ error: "File is required" });
+        let fileUrl = null;
 
-        const fileName = "classwork/" + Date.now() + "_" + req.file.originalname;
 
-        const { error: uploadErr } = await supabase.storage
-            .from("classwork")
-            .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
+        if (req.file) {
+            const fileName = "classwork/" + Date.now() + "_" + req.file.originalname;
 
-        if (uploadErr) return res.status(500).json({ error: "File upload failed" });
+            const { error: uploadErr } = await supabase.storage
+                .from("classwork")
+                .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
 
-        const { data: urlData } = supabase.storage
-            .from("classwork")
-            .getPublicUrl(fileName);
+            if (uploadErr) {
+                console.log(uploadErr);
+                return res.status(500).json({ error: "File upload failed" });
+            }
 
-        const fileUrl = urlData.publicUrl;
+            const { data: urlData } = supabase.storage
+                .from("classwork")
+                .getPublicUrl(fileName);
 
+            fileUrl = urlData.publicUrl;
+        }
+
+        
         const { error } = await supabase
             .from("classwork")
-            .insert([{ title, description, class_name, section_name, subject, file_url: fileUrl, created_at: Date.now() }]);
+            .insert([{
+                title,
+                description,
+                class_name,
+                section_name,
+                subject,
+                file_url: fileUrl,
+                created_at: new Date()  // timestamp thik format me
+            }]);
 
-        if (error) return res.status(500).json({ error: error.message });
+        if (error) {
+            console.log(error);
+            return res.status(500).json({ error: error.message });
+        }
 
-        res.json({ success: true, message: "Classwork Uploaded Successfully", fileUrl });
+        res.json({
+            success: true,
+            message: "Classwork Uploaded Successfully",
+            fileUrl
+        });
 
     } catch (err) {
+        console.log(err);
         res.status(500).json({ error: "Server error" });
     }
 });
-
 
 // ----------------------- GET CLASSWORK ----------------------------
 app.get("/getClasswork", async (req, res) => {
@@ -381,3 +403,4 @@ app.get("/getClasswork", async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
