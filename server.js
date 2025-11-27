@@ -304,11 +304,22 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
 // ----------------------- UPLOAD HOMEWORK ----------------------------
 app.post("/uploadHomework", async (req, res) => {
     try {
-        const { class_name, subject, homework_text, teacher_id } = req.body;
+        const { class_name, section, subject, homework_text, teacher_id } = req.body;
+
+        if (!class_name || !section || !subject || !homework_text || !teacher_id) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
 
         const { data, error } = await supabase
             .from("homework")
-            .insert([{ class_name, subject, homework_text, teacher_id }]);
+            .insert([{
+                class_name,
+                section,
+                subject,
+                homework_text,
+                teacher_id,
+                date: new Date().toISOString().split("T")[0]  // yyyy-mm-dd
+            }]);
 
         if (error) return res.status(400).json({ error: error.message });
 
@@ -318,6 +329,34 @@ app.post("/uploadHomework", async (req, res) => {
         return res.status(500).json({ error: err.message });
     }
 });
+
+
+
+
+// ----------------------- getteacher homework ----------------------------
+
+app.get("/getTeacherHomeworks", async (req, res) => {
+    const { teacher_id, class_name, section } = req.query;
+
+    try {
+        let { data, error } = await supabase
+            .from("homework")
+            .select("*")
+            .eq("teacher_id", teacher_id)
+            .eq("class_name", class_name)
+            .eq("section", section)
+            .order("id", { ascending: false });
+
+        if (error) return res.status(500).json({ message: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
 
 
 // ----------------------- UPLOAD CLASSWORK ----------------------------
@@ -403,4 +442,5 @@ app.get("/getClasswork", async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
 });
+
 
