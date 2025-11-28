@@ -666,6 +666,62 @@ app.get("/getTeacherAttendanceCalendar", async (req, res) => {
     res.json(data);
 });
 
+//...............AdminProfile...................
+app.get("/getAdmin", async (req, res) => {
+    const { email } = req.query;
+
+    const { data, error } = await supabase
+        .from("admins")
+        .select("*")
+        .eq("email", email)
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
+
+
+app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
+    try {
+        const { name, phone, email } = req.body;
+
+        let imageUrl = null;
+
+        if (req.file) {
+            const ext = req.file.originalname.split(".").pop();
+            const fileName = `admin_${Date.now()}.${ext}`;
+
+            await supabase.storage
+                .from("admin_images")
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype
+                });
+
+            const { data: urlData } = supabase.storage
+                .from("admin_images")
+                .getPublicUrl(fileName);
+
+            imageUrl = urlData.publicUrl;
+        }
+
+        const { error } = await supabase
+            .from("admins")
+            .update({
+                name,
+                phone,
+                ...(imageUrl && { image: imageUrl })
+            })
+            .eq("email", email);
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({ success: true, message: "Profile updated!" });
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 
 
 
@@ -678,6 +734,7 @@ app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
 
 
