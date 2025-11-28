@@ -223,6 +223,75 @@ app.post("/upload_notice", async (req, res) => {
 });
 
 
+const express = require("express");
+const app = express();
+app.use(express.json());
+
+const { createClient } = require("@supabase/supabase-js");
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+);
+
+
+
+
+// ===============================================
+// 2️⃣ GET ALL NOTICES
+// ===============================================
+app.get("/get_all_notices", async (req, res) => {
+
+    const { data, error } = await supabase
+        .from("notices")
+        .select("*")
+        .order("time", { ascending: false });
+
+    if (error) return res.status(500).json({ error });
+
+    res.json(data);
+});
+
+
+// ===============================================
+// 3️⃣ DELETE NOTICE
+// ===============================================
+app.delete("/delete_notice/:id", async (req, res) => {
+
+    const { id } = req.params;
+
+    const { error } = await supabase
+        .from("notices")
+        .delete()
+        .eq("id", id);
+
+    if (error) return res.status(500).json({ error });
+
+    res.json({ message: "Notice Deleted!" });
+});
+
+
+// ===============================================
+// 4️⃣ UPDATE NOTICE (EDIT)
+// ===============================================
+app.put("/update_notice/:id", async (req, res) => {
+
+    const { id } = req.params;
+    const { title, desc } = req.body;
+
+    const { error } = await supabase
+        .from("notices")
+        .update({
+            title: title,
+            description: desc
+        })
+        .eq("id", id);
+
+    if (error) return res.status(500).json({ error });
+
+    res.json({ message: "Notice Updated!" });
+});
+
 // ----------------------- UPLOAD NOTES ----------------------------
 app.post("/upload_notes", upload.single("pdf"), async (req, res) => {
     const { title, cls } = req.body;
@@ -624,6 +693,7 @@ app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
 
 
