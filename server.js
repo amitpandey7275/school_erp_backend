@@ -449,8 +449,55 @@ app.get("/getTeacherNotices", async (req, res) => {
 });
 
 
+
+
+
+
+// ----------------------- upload teacher exam----------------------------
+
+app.post("/teacherUploadUpcomingExam", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("upcoming_exam")
+            .insert([req.body]);
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({ success: true, message: "Upcoming Exam Uploaded!" });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// ----------------------- get teacher exam----------------------------
+app.get("/getTeacherUpcomingExams", async (req, res) => {
+    try {
+        const { teacher_id } = req.query;
+
+        const { data, error } = await supabase
+            .from("upcoming_exam")
+            .select("*")
+            .eq("teacher_id", teacher_id)
+            .order("id", { ascending: false });
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
