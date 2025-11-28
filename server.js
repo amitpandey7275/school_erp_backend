@@ -21,7 +21,7 @@ const supabase = createClient(
 // ----------------------- MULTER CONFIG ----------------------------
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+    limits: { fileSize: 20 * 1024 * 1024 }
 });
 
 
@@ -115,11 +115,11 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
 
     const fileName = `students/${Date.now()}-${file.originalname}`;
 
-    const { data, error } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
         .from("student-photos")
         .upload(fileName, file.buffer, { contentType: file.mimetype, upsert: true });
 
-    if (error) return res.json({ error: error.message });
+    if (uploadError) return res.json({ error: uploadError.message });
 
     const { data: urlData } = supabase.storage
         .from("student-photos")
@@ -318,7 +318,7 @@ app.post("/uploadHomework", async (req, res) => {
                 subject,
                 homework_text,
                 teacher_id,
-                date: new Date().toISOString().split("T")[0]  // yyyy-mm-dd
+                date: new Date().toISOString().split("T")[0]
             }]);
 
         if (error) return res.status(400).json({ error: error.message });
@@ -331,10 +331,7 @@ app.post("/uploadHomework", async (req, res) => {
 });
 
 
-
-
-// ----------------------- getteacher homework ----------------------------
-
+// ----------------------- GET TEACHER HOMEWORK ----------------------------
 app.get("/getTeacherHomeworks", async (req, res) => {
     const { teacher_id, class_name, section } = req.query;
 
@@ -357,15 +354,12 @@ app.get("/getTeacherHomeworks", async (req, res) => {
 });
 
 
-
-
 // ----------------------- UPLOAD CLASSWORK ----------------------------
 app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
     try {
         const { title, description, class_name, section_name, subject } = req.body;
 
         let fileUrl = null;
-
 
         if (req.file) {
             const fileName = "classwork/" + Date.now() + "_" + req.file.originalname;
@@ -375,7 +369,6 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
                 .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
 
             if (uploadErr) {
-                console.log(uploadErr);
                 return res.status(500).json({ error: "File upload failed" });
             }
 
@@ -386,7 +379,6 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
             fileUrl = urlData.publicUrl;
         }
 
-        
         const { error } = await supabase
             .from("classwork")
             .insert([{
@@ -396,11 +388,10 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
                 section_name,
                 subject,
                 file_url: fileUrl,
-                created_at: new Date()  // timestamp thik format me
+                created_at: new Date()
             }]);
 
         if (error) {
-            console.log(error);
             return res.status(500).json({ error: error.message });
         }
 
@@ -411,10 +402,10 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
         });
 
     } catch (err) {
-        console.log(err);
         res.status(500).json({ error: "Server error" });
     }
 });
+
 
 // ----------------------- GET CLASSWORK ----------------------------
 app.get("/getClasswork", async (req, res) => {
@@ -438,11 +429,28 @@ app.get("/getClasswork", async (req, res) => {
 });
 
 
+// ----------------------- GET TEACHER NOTICES (ADDED) ----------------------------
+app.get("/getTeacherNotices", async (req, res) => {
+    try {
+        const { teacher_id } = req.query;
+
+        const { data, error } = await supabase
+            .from("notices")
+            .select("*")
+            .order("time", { ascending: false });
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
-
-
-
