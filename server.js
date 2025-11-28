@@ -592,6 +592,28 @@ app.get("/getStudents", async (req, res) => {
 });
 
 
+// ----------------------- teachers Attendance----------------------------
+// 3️⃣ GET TEACHER ATTENDANCE FOR CALENDAR
+// Example: /getTeacherAttendanceCalendar?uid=UID201
+app.get("/getTeacherAttendanceCalendar", async (req, res) => {
+    const { uid } = req.query;
+
+    if (!uid) {
+        return res.status(400).json({ error: "UID required" });
+    }
+
+    const { data, error } = await supabase
+        .from("teacher_attendance")
+        .select("*")
+        .eq("teacher_uid", uid);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+});
+
+
+
 
 
 
@@ -602,6 +624,7 @@ app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
 
 
