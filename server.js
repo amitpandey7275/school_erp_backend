@@ -494,10 +494,74 @@ app.get("/getTeacherUpcomingExams", async (req, res) => {
 
 
 
+// 1️⃣  UPLOAD NOTES (POST)
+// ******************************************************************
+
+app.post("/teacherUploadNotes", async (req, res) => {
+    try {
+        const { class_name, subject, title, pdf_url, teacher_id } = req.body;
+
+        // Insert into Supabase
+        const { data, error } = await supabase
+            .from("TeacherUploadNotes")
+            .insert([
+                {
+                    class_name,
+                    subject,
+                    title,
+                    pdf_url,
+                    teacher_id
+                }
+            ]);
+
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        res.json({ message: "Notes Uploaded Successfully", data });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ******************************************************************
+// 2️⃣  GET ALL UPLOADED NOTES (GET)
+// ******************************************************************
+
+app.get("/getTeacherUploadNotes", async (req, res) => {
+    try {
+        const { teacher_id } = req.query;
+
+        let query = supabase
+            .from("TeacherUploadNotes")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+        if (teacher_id) {
+            query = query.eq("teacher_id", teacher_id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+
+
 
 // ----------------------- START SERVER ----------------------------
 app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
