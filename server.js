@@ -222,21 +222,6 @@ app.post("/upload_notice", async (req, res) => {
     res.json({ message: "Notice Uploaded!" });
 });
 
-
-const express = require("express");
-const app = express();
-app.use(express.json());
-
-const { createClient } = require("@supabase/supabase-js");
-
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
-);
-
-
-
-
 // ===============================================
 // 2️⃣ GET ALL NOTICES
 // ===============================================
@@ -693,6 +678,7 @@ app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
 
 
