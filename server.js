@@ -555,6 +555,45 @@ app.get("/getTeacherUploadNotes", async (req, res) => {
 
 
 
+// GET /getStudents?class_name=1&section=A
+app.get("/getStudents", async (req, res) => {
+  try {
+    const { class_name, section } = req.query;
+
+    let query = supabase
+      .from("students")
+      .select("*")
+      .order("class_name", { ascending: true })
+      .order("section", { ascending: true })
+      .order("roll_no", { ascending: true });
+
+    // Agar class_name aaya hai to filter
+    if (class_name && class_name !== "ALL") {
+      query = query.eq("class_name", class_name);
+    }
+
+    // Agar section aaya hai to filter
+    if (section && section !== "ALL") {
+      query = query.eq("section", section);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+
 
 
 
@@ -563,5 +602,6 @@ app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
 
