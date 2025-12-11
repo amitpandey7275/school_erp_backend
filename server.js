@@ -469,6 +469,26 @@ app.get("/admin_get_gallery", async (req, res) => {
     }
 });
 
+
+
+// ----------------------- USER GALLERY (For Students) ----------------------------
+app.get("/user_gallery", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("gallery_images")
+            .select("*")
+            .order("time", { ascending: false });
+
+        if (error) return res.status(500).json({ success: "false", message: error.message });
+
+        res.json({ success: "true", images: data });
+
+    } catch (err) {
+        res.status(500).json({ success: "false", message: "Server error" });
+    }
+});
+
+
 // ----------------------- ADMIN DELETE GALLERY ----------------------------
 app.post("/admin_delete_gallery", async (req, res) => {
     try {
@@ -796,5 +816,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
