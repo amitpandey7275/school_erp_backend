@@ -321,10 +321,12 @@ app.get("/get_notices", async (req, res) => {
 
 
 // ----------------------- UPLOAD GALLERY ----------------------------
-app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
+
+
+app.post("/admin_upload_gallery", upload.array("images", 10), async (req, res) => {
     try {
-        if (!req.files?.length) {
-            return res.status(400).json({ error: "Images missing" });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: "false", message: "Images missing" });
         }
 
         let uploadedImages = [];
@@ -332,25 +334,46 @@ app.post("/upload_gallery", upload.array("images", 10), async (req, res) => {
         for (const file of req.files) {
             const fileName = Date.now() + "_" + file.originalname;
 
+            // Upload to Supabase Storage
             const { error: uploadErr } = await supabase.storage
                 .from("gallery")
                 .upload(fileName, file.buffer, { contentType: file.mimetype });
 
-            if (uploadErr) return res.status(500).json({ error: uploadErr });
+            if (uploadErr) {
+                console.error(uploadErr);
+                return res.status(500).json({ success: "false", message: "Upload error" });
+            }
 
+            // Get public URL
             const { data: urlData } = supabase.storage
                 .from("gallery")
                 .getPublicUrl(fileName);
 
-            uploadedImages.push({ imageUrl: urlData.publicUrl, time: Date.now() });
+            uploadedImages.push({
+                imageUrl: urlData.publicUrl,
+                fileName: fileName,
+                time: Date.now()
+            });
         }
 
-        await supabase.from("gallery_images").insert(uploadedImages);
+        // Save metadata inside Supabase Database table
+        const { error: dbErr } = await supabase
+            .from("gallery_images")
+            .insert(uploadedImages);
 
-        res.json({ success: true, images: uploadedImages });
+        if (dbErr) {
+            console.error(dbErr);
+            return res.status(500).json({ success: "false", message: "DB Insert error" });
+        }
+
+        return res.json({
+            success: "true",
+            images: uploadedImages
+        });
 
     } catch (err) {
-        res.status(500).json({ error: "Server error" });
+        console.error(err);
+        res.status(500).json({ success: "false", message: "Server error" });
     }
 });
 
@@ -734,6 +757,7 @@ app.listen(3000, "0.0.0.0", () => {
     console.log("Server running on port 3000");
     console.log("Thank You");
 });
+
 
 
 
