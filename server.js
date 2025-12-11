@@ -269,20 +269,18 @@ app.post("/upload_notice", async (req, res) => {
 
 // ----------------------- GET ALL NOTICES ----------------------------
 app.get("/get_all_notices", async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from("notices")
-            .select("*")
-            .order("time", { ascending: false });
 
-        if (error) return res.status(500).json({ error });
+    const { data, error } = await supabase
+        .from("notices")
+        .select("*")
+        .order("time", { ascending: false });
 
-        res.json(data);
+    if (error) return res.status(500).json({ error });
 
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
+    res.json(data);
 });
+
+
 
 // ----------------------- DELETE NOTICE ----------------------------
 app.delete("/delete_notice/:id", async (req, res) => {
@@ -757,3 +755,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
