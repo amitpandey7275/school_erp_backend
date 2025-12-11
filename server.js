@@ -1,5 +1,5 @@
 // ----------------------- IMPORTS ----------------------------
-require('dotenv').config();
+require("dotenv").config();
 const multer = require("multer");
 const express = require("express");
 const path = require("path");
@@ -16,7 +16,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    console.error("❌ ERROR: Supabase ENV variables missing.");
+    console.error("❌ ERROR: SUPABASE ENV NOT SET");
     process.exit(1);
 }
 
@@ -25,7 +25,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 // ----------------------- MULTER CONFIG ----------------------------
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 20 * 1024 * 1024 } // 20 MB
+    limits: { fileSize: 20 * 1024 * 1024 }
 });
 
 // ----------------------- REGISTER USER ----------------------------
@@ -36,15 +36,18 @@ app.post("/register", async (req, res) => {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) return res.status(400).json({ error: error.message });
 
+        const userId = data.user.id;
+
         const { error: dbError } = await supabase
             .from("users")
-            .insert([{ id: data.user.id, name, email, role, created_at: Date.now() }]);
+            .insert([{ id: userId, name, email, role, created_at: Date.now() }]);
 
         if (dbError) return res.status(500).json({ error: dbError.message });
 
-        res.json({ message: "User Registered Successfully!", userId: data.user.id });
+        res.json({ message: "User Registered Successfully!", userId });
+
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -54,12 +57,13 @@ app.post("/login", async (req, res) => {
         const { email, password } = req.body;
 
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
         if (error) return res.status(400).json({ error: error.message });
 
         res.json({ message: "Login Success", data });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -79,7 +83,7 @@ app.post("/get_role", async (req, res) => {
         res.json({ role: data.role });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -91,16 +95,18 @@ app.post("/add_student", async (req, res) => {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) return res.status(400).json({ error: error.message });
 
+        const userId = data.user.id;
+
         const { error: dbError } = await supabase
             .from("users")
-            .insert([{ id: data.user.id, name, email, phone, class: cls, role: "student", created_at: Date.now() }]);
+            .insert([{ id: userId, name, email, phone, class: cls, role: "student", created_at: Date.now() }]);
 
         if (dbError) return res.status(500).json({ error: dbError.message });
 
-        res.json({ message: "Student Added Successfully!", userId: data.user.id });
+        res.json({ message: "Student Added Successfully!", userId });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -120,11 +126,11 @@ app.get("/get_student_profile", async (req, res) => {
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-// ----------------------- UPDATE STUDENT PHOTO (FIXED VERSION) ----------------------------
+// ----------------------- UPDATE STUDENT PHOTO ----------------------------
 app.post("/update_student_photo", upload.single("image"), async (req, res) => {
     try {
         const file = req.file;
@@ -154,8 +160,9 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
         if (updateErr) return res.json({ error: updateErr.message });
 
         res.json({ success: true, profile_image_url: imageUrl });
+
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -173,10 +180,10 @@ app.post("/add_teacher", async (req, res) => {
 
         if (dbError) return res.status(500).json({ error: dbError.message });
 
-        res.json({ message: "Teacher Added Successfully!" });
+        res.json({ message: "Teacher Added Successfully!", userId: data.user.id });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -191,12 +198,12 @@ app.get("/getTeacherProfile", async (req, res) => {
             .eq("uid", uid)
             .single();
 
-        if (!data) return res.json({ success: false, message: "Teacher not found" });
+        if (error || !data) return res.json({ success: false, message: "Teacher not found" });
 
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -206,16 +213,19 @@ app.post("/add_common_user", async (req, res) => {
         const { name, email, password, phone } = req.body;
 
         const { data, error } = await supabase.auth.signUp({ email, password });
+
         if (error) return res.status(400).json({ error: error.message });
 
-        await supabase
+        const { error: dbError } = await supabase
             .from("users")
             .insert([{ id: data.user.id, name, email, phone, role: "common", created_at: Date.now() }]);
 
-        res.json({ message: "Common User Added!" });
+        if (dbError) return res.status(500).json({ error: dbError.message });
+
+        res.json({ message: "Common User Added!", userId: data.user.id });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -223,6 +233,7 @@ app.post("/add_common_user", async (req, res) => {
 app.post("/upload_event", upload.single("image"), async (req, res) => {
     try {
         const { title, desc } = req.body;
+
         const url = `https://school-erp-zhpk.onrender.com/uploads/${req.file.filename}`;
 
         const { error } = await supabase
@@ -234,7 +245,7 @@ app.post("/upload_event", upload.single("image"), async (req, res) => {
         res.json({ message: "Event Uploaded!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -252,28 +263,25 @@ app.post("/upload_notice", async (req, res) => {
         res.json({ message: "Notice Uploaded!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-// ----------------------- GET NOTICES ----------------------------
-app.get("/get_notices", async (req, res) => {
-    const { data, error } = await supabase
-        .from("notices")
-        .select("*")
-        .order("time", { ascending: false });
+// ----------------------- GET ALL NOTICES ----------------------------
+app.get("/get_all_notices", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("notices")
+            .select("*")
+            .order("time", { ascending: false });
 
-    if (error) return res.status(500).json({ error });
+        if (error) return res.status(500).json({ error });
 
-    // convert description → desc (as app expects)
-    const fixed = data.map(n => ({
-        id: n.id,
-        title: n.title,
-        desc: n.description,
-        time: n.time
-    }));
+        res.json(data);
 
-    res.json(fixed);
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
 // ----------------------- DELETE NOTICE ----------------------------
@@ -281,12 +289,17 @@ app.delete("/delete_notice/:id", async (req, res) => {
     try {
         const { id } = req.params;
 
-        await supabase.from("notices").delete().eq("id", id);
+        const { error } = await supabase
+            .from("notices")
+            .delete()
+            .eq("id", id);
+
+        if (error) return res.status(500).json({ error });
 
         res.json({ message: "Notice Deleted!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -296,15 +309,20 @@ app.put("/update_notice/:id", async (req, res) => {
         const { id } = req.params;
         const { title, desc } = req.body;
 
-        await supabase
+        const { error } = await supabase
             .from("notices")
-            .update({ title, description: desc })
+            .update({
+                title: title,
+                description: desc
+            })
             .eq("id", id);
+
+        if (error) return res.status(500).json({ error });
 
         res.json({ message: "Notice Updated!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -314,14 +332,16 @@ app.post("/upload_notes", upload.single("pdf"), async (req, res) => {
         const { title, cls } = req.body;
         const url = `https://school-erp-zhpk.onrender.com/uploads/${req.file.filename}`;
 
-        await supabase
+        const { error } = await supabase
             .from("notes")
             .insert([{ class: cls, title, pdfUrl: url, time: Date.now() }]);
+
+        if (error) return res.status(500).json({ error });
 
         res.json({ message: "Notes Uploaded!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -331,22 +351,27 @@ app.post("/upload_timetable", upload.single("pdf"), async (req, res) => {
         const { cls } = req.body;
         const url = `https://school-erp-zhpk.onrender.com/uploads/${req.file.filename}`;
 
-        await supabase
+        const { error } = await supabase
             .from("timetable")
             .insert([{ class: cls, pdfUrl: url, time: Date.now() }]);
+
+        if (error) return res.status(500).json({ error });
 
         res.json({ message: "TimeTable Uploaded!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-// ----------------------- ADMIN UPLOAD GALLERY ----------------------------
+// =========================================================================
+//                          ADMIN GALLERY UPLOAD
+// =========================================================================
+
 app.post("/admin_upload_gallery", upload.array("images", 10), async (req, res) => {
     try {
-        if (!req.files.length) {
-            return res.status(400).json({ success: false, message: "No images received" });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: "false", message: "Images missing" });
         }
 
         let uploadedImages = [];
@@ -354,9 +379,13 @@ app.post("/admin_upload_gallery", upload.array("images", 10), async (req, res) =
         for (const file of req.files) {
             const fileName = Date.now() + "_" + file.originalname;
 
-            await supabase.storage
+            const { error: uploadErr } = await supabase.storage
                 .from("gallery")
                 .upload(fileName, file.buffer, { contentType: file.mimetype });
+
+            if (uploadErr) {
+                return res.status(500).json({ success: "false", message: "Upload error" });
+            }
 
             const { data: urlData } = supabase.storage
                 .from("gallery")
@@ -364,32 +393,40 @@ app.post("/admin_upload_gallery", upload.array("images", 10), async (req, res) =
 
             uploadedImages.push({
                 imageUrl: urlData.publicUrl,
-                fileName,
+                fileName: fileName,
                 time: Date.now()
             });
         }
 
-        await supabase.from("gallery_images").insert(uploadedImages);
+        const { error: dbErr } = await supabase
+            .from("gallery_images")
+            .insert(uploadedImages);
 
-        res.json({ success: true, images: uploadedImages });
+        if (dbErr) {
+            return res.status(500).json({ success: "false", message: "DB Insert error" });
+        }
+
+        return res.json({ success: "true", images: uploadedImages });
 
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server Error" });
+        res.status(500).json({ success: "false", message: "Server error" });
     }
 });
 
 // ----------------------- ADMIN GET GALLERY ----------------------------
 app.get("/admin_get_gallery", async (req, res) => {
     try {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from("gallery_images")
             .select("*")
             .order("time", { ascending: false });
 
-        res.json({ success: true, images: data });
+        if (error) return res.status(500).json({ success: "false", message: "DB Fetch error" });
+
+        res.json({ success: "true", images: data });
 
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server Error" });
+        res.status(500).json({ success: "false", message: "Server error" });
     }
 });
 
@@ -398,38 +435,57 @@ app.post("/admin_delete_gallery", async (req, res) => {
     try {
         const { fileName } = req.body;
 
-        await supabase.storage.from("gallery").remove([fileName]);
+        if (!fileName) return res.status(400).json({ success: "false", message: "fileName missing" });
 
-        await supabase
+        const { error: storageErr } = await supabase.storage
+            .from("gallery")
+            .remove([fileName]);
+
+        if (storageErr) return res.status(500).json({ success: "false", message: "Storage remove error" });
+
+        const { error: dbErr } = await supabase
             .from("gallery_images")
             .delete()
             .eq("fileName", fileName);
 
-        res.json({ success: true, message: "Deleted" });
+        if (dbErr) return res.status(500).json({ success: "false", message: "DB delete error" });
+
+        res.json({ success: "true", message: "Deleted" });
 
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server Error" });
+        res.status(500).json({ success: "false", message: "Server error" });
     }
 });
 
-// ----------------------- UPLOAD HOMEWORK ----------------------------
+// =========================================================================
+//                         HOMEWORK SYSTEM
+// =========================================================================
+
 app.post("/uploadHomework", async (req, res) => {
     try {
         const { class_name, section, subject, homework_text, teacher_id } = req.body;
 
-        await supabase.from("homework").insert([{
-            class_name,
-            section,
-            subject,
-            homework_text,
-            teacher_id,
-            date: new Date().toISOString().split("T")[0]
-        }]);
+        if (!class_name || !section || !subject || !homework_text || !teacher_id) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
 
-        res.json({ success: true, message: "Homework uploaded" });
+        const { data, error } = await supabase
+            .from("homework")
+            .insert([{
+                class_name,
+                section,
+                subject,
+                homework_text,
+                teacher_id,
+                date: new Date().toISOString().split("T")[0]
+            }]);
+
+        if (error) return res.status(400).json({ error: error.message });
+
+        res.json({ success: true, message: "Homework uploaded", data });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -438,7 +494,7 @@ app.get("/getTeacherHomeworks", async (req, res) => {
     try {
         const { teacher_id, class_name, section } = req.query;
 
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from("homework")
             .select("*")
             .eq("teacher_id", teacher_id)
@@ -446,25 +502,33 @@ app.get("/getTeacherHomeworks", async (req, res) => {
             .eq("section", section)
             .order("id", { ascending: false });
 
+        if (error) return res.status(500).json({ message: error.message });
+
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ message: err.message });
     }
 });
 
-// ----------------------- UPLOAD CLASSWORK ----------------------------
+// =========================================================================
+//                         CLASSWORK UPLOAD
+// =========================================================================
+
 app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
     try {
         const { title, description, class_name, section_name, subject } = req.body;
+
         let fileUrl = null;
 
         if (req.file) {
             const fileName = "classwork/" + Date.now() + "_" + req.file.originalname;
 
-            await supabase.storage
+            const { error: uploadErr } = await supabase.storage
                 .from("classwork")
                 .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
+
+            if (uploadErr) return res.status(500).json({ error: "File upload failed" });
 
             const { data: urlData } = supabase.storage
                 .from("classwork")
@@ -473,20 +537,28 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
             fileUrl = urlData.publicUrl;
         }
 
-        await supabase.from("classwork").insert([{
-            title,
-            description,
-            class_name,
-            section_name,
-            subject,
-            file_url: fileUrl,
-            created_at: new Date()
-        }]);
+        const { error } = await supabase
+            .from("classwork")
+            .insert([{
+                title,
+                description,
+                class_name,
+                section_name,
+                subject,
+                file_url: fileUrl,
+                created_at: new Date()
+            }]);
 
-        res.json({ success: true, message: "Classwork Uploaded", fileUrl });
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({
+            success: true,
+            message: "Classwork Uploaded Successfully",
+            fileUrl
+        });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -495,33 +567,40 @@ app.get("/getClasswork", async (req, res) => {
     try {
         const { class: className, section } = req.query;
 
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from("classwork")
             .select("*")
             .eq("class_name", className)
             .eq("section_name", section)
             .order("created_at", { ascending: false });
 
+        if (error) return res.status(500).json({ error: error.message });
+
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-// ----------------------- TEACHER NOTES UPLOAD ----------------------------
+// =========================================================================
+//                         TEACHER NOTES
+// =========================================================================
+
 app.post("/teacherUploadNotes", async (req, res) => {
     try {
         const { class_name, subject, title, pdf_url, teacher_id } = req.body;
 
-        await supabase
+        const { data, error } = await supabase
             .from("TeacherUploadNotes")
             .insert([{ class_name, subject, title, pdf_url, teacher_id }]);
 
-        res.json({ message: "Notes Uploaded" });
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({ message: "Notes Uploaded Successfully", data });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -537,77 +616,102 @@ app.get("/getTeacherUploadNotes", async (req, res) => {
 
         if (teacher_id) query = query.eq("teacher_id", teacher_id);
 
-        const { data } = await query;
+        const { data, error } = await query;
+
+        if (error) return res.status(500).json({ error: error.message });
 
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// ----------------------- GET STUDENTS ----------------------------
+// =========================================================================
+//                         GET STUDENTS
+// =========================================================================
+
 app.get("/getStudents", async (req, res) => {
-    try {
-        const { class_name, section } = req.query;
+  try {
+    const { class_name, section } = req.query;
 
-        let query = supabase
-            .from("students")
-            .select("*")
-            .order("class_name", { ascending: true })
-            .order("section", { ascending: true })
-            .order("roll_no", { ascending: true });
+    let query = supabase
+      .from("students")
+      .select("*")
+      .order("class_name", { ascending: true })
+      .order("section", { ascending: true })
+      .order("roll_no", { ascending: true });
 
-        if (class_name && class_name !== "ALL") query = query.eq("class_name", class_name);
-        if (section && section !== "ALL") query = query.eq("section", section);
-
-        const { data } = await query;
-
-        res.json(data);
-
-    } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+    if (class_name && class_name !== "ALL") {
+      query = query.eq("class_name", class_name);
     }
+
+    if (section && section !== "ALL") {
+      query = query.eq("section", section);
+    }
+
+    const { data, error } = await query;
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-// ----------------------- TEACHER ATTENDANCE ----------------------------
+// =========================================================================
+//                         TEACHER ATTENDANCE
+// =========================================================================
+
 app.get("/getTeacherAttendanceCalendar", async (req, res) => {
     try {
         const { uid } = req.query;
 
-        const { data } = await supabase
+        if (!uid) return res.status(400).json({ error: "UID required" });
+
+        const { data, error } = await supabase
             .from("teacher_attendance")
             .select("*")
             .eq("teacher_uid", uid);
 
+        if (error) return res.status(500).json({ error: error.message });
+
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-// ----------------------- ADMIN PROFILE ----------------------------
+// =========================================================================
+//                         ADMIN PROFILE
+// =========================================================================
+
 app.get("/getAdmin", async (req, res) => {
     try {
         const { email } = req.query;
 
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from("admins")
             .select("*")
             .eq("email", email)
             .single();
 
+        if (error) return res.status(500).json({ error: error.message });
+
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
 app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
     try {
         const { name, phone, email } = req.body;
+
         let imageUrl = null;
 
         if (req.file) {
@@ -616,7 +720,9 @@ app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
 
             await supabase.storage
                 .from("admin_images")
-                .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype
+                });
 
             const { data: urlData } = supabase.storage
                 .from("admin_images")
@@ -625,21 +731,29 @@ app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
             imageUrl = urlData.publicUrl;
         }
 
-        await supabase
+        const { error } = await supabase
             .from("admins")
-            .update({ name, phone, ...(imageUrl && { image: imageUrl }) })
+            .update({
+                name,
+                phone,
+                ...(imageUrl && { image: imageUrl })
+            })
             .eq("email", email);
 
-        res.json({ success: true, message: "Profile Updated!" });
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({ success: true, message: "Profile updated!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server Error" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
-// ----------------------- START SERVER ----------------------------
+// =========================================================================
+//                         SERVER START
+// =========================================================================
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
-
