@@ -138,7 +138,7 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
 
         if (!file) return res.json({ error: "Image is required" });
 
-        const fileName = students/${Date.now()}-${file.originalname};
+        const fileName = `students/${Date.now()}-${file.originalname}`;
 
         const { error: uploadError } = await supabase.storage
             .from("student-photos")
@@ -160,11 +160,11 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
         if (updateErr) return res.json({ error: updateErr.message });
 
         res.json({ success: true, profile_image_url: imageUrl });
-
     } catch (err) {
         res.status(500).json({ error: "Server error" });
     }
 });
+
 
 // ----------------------- ADD TEACHER ----------------------------
 app.post("/add_teacher", async (req, res) => {
@@ -759,3 +759,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(🚀 Server running on port ${PORT});
 });
+
