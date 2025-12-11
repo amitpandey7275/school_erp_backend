@@ -267,7 +267,7 @@ app.post("/upload_notice", async (req, res) => {
     }
 });
 
-// ----------------------- GET ALL NOTICES ----------------------------
+// ----------------------- GET ALL NOTICES Admin----------------------------
 app.get("/get_all_notices", async (req, res) => {
 
     const { data, error } = await supabase
@@ -279,6 +279,47 @@ app.get("/get_all_notices", async (req, res) => {
 
     res.json(data);
 });
+
+
+
+// ----------------------- GET ALL NOTICES Student----------------------------
+app.get("/get_notices", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("notices")
+            .select("*")
+            .order("time", { ascending: false });
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
+// ----------------------- GET ALL NOTICES teacher----------------------------
+app.get("/getTeacherNotices", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("notices")
+            .select("*")
+            .order("time", { ascending: false });
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
+
+
 
 
 
@@ -755,4 +796,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
