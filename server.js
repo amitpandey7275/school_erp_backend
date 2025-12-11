@@ -516,7 +516,24 @@ app.post("/admin_delete_gallery", async (req, res) => {
     }
 });
 
-// =========================================================================
+
+// ----------------------- GET ALL TEACHERS list Admin ----------------------------
+app.get("/get_teachers", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("teachers")
+            .select("*")
+            .order("id", { ascending: true });
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 //                         HOMEWORK SYSTEM
 // =========================================================================
 
@@ -816,6 +833,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
