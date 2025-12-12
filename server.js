@@ -366,24 +366,38 @@ app.post("/upload_notes", upload.single("pdf"), async (req, res) => {
     }
 });
 
-// ----------------------- UPLOAD TIMETABLE ----------------------------
-app.post("/upload_timetable", upload.single("pdf"), async (req, res) => {
+// ----------------------- UPLOAD TIME TABLE ROW ----------------------------
+app.post("/uploadTimeTable", async (req, res) => {
     try {
-        const { cls } = req.body;
-        const url = `https://school-erp-zhpk.onrender.com/uploads/${req.file.filename}`;
+        const { class_name, section, day, period_no, subject, teacher_name, time_range } = req.body;
+
+        if (!class_name || !section || !day || !period_no || !subject || !teacher_name || !time_range) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
 
         const { error } = await supabase
-            .from("timetable")
-            .insert([{ class: cls, pdfUrl: url, time: Date.now() }]);
+            .from("time_table")
+            .insert([
+                {
+                    class_name,
+                    section,
+                    day,
+                    period_no,
+                    subject,
+                    teacher_name,
+                    time_range
+                }
+            ]);
 
-        if (error) return res.status(500).json({ error });
+        if (error) return res.status(500).json({ error: error.message });
 
-        res.json({ message: "TimeTable Uploaded!" });
+        res.json({ success: true, message: "Time Table Row Added!" });
 
     } catch (err) {
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ error: "Server Error" });
     }
 });
+
 
 // =========================================================================
 //                          ADMIN GALLERY UPLOAD
@@ -860,6 +874,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
