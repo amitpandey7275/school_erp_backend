@@ -761,6 +761,51 @@ app.get("/getTeacherAttendanceCalendar", async (req, res) => {
     }
 });
 
+// ----------------------- MARK TEACHER ATTENDANCE (ADMIN) ----------------------------
+app.post("/markTeacherAttendance", async (req, res) => {
+    try {
+        const { teacher_uid, status, date } = req.body;
+
+        if (!teacher_uid || !status || !date) {
+            return res.status(400).json({ error: "Missing teacher_uid, status or date" });
+        }
+
+        // Check if already marked for selected date
+        const { data: existing, error: checkError } = await supabase
+            .from("teacher_attendance")
+            .select("*")
+            .eq("teacher_uid", teacher_uid)
+            .eq("date", date)
+            .maybeSingle();
+
+        if (existing) {
+            // Update existing attendance
+            const { error: updateErr } = await supabase
+                .from("teacher_attendance")
+                .update({ status })
+                .eq("teacher_uid", teacher_uid)
+                .eq("date", date);
+
+            if (updateErr) return res.status(500).json({ error: updateErr.message });
+
+            return res.json({ success: true, message: "Attendance updated!" });
+        }
+
+        // Insert new record
+        const { error } = await supabase
+            .from("teacher_attendance")
+            .insert([{ teacher_uid, date, status }]);
+
+        if (error) return res.status(500).json({ error });
+
+        res.json({ success: true, message: "Attendance marked!" });
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
 // =========================================================================
 //                         ADMIN PROFILE
 // =========================================================================
@@ -833,6 +878,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
