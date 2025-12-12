@@ -229,25 +229,7 @@ app.post("/add_common_user", async (req, res) => {
     }
 });
 
-// ----------------------- UPLOAD EVENT ----------------------------
-app.post("/upload_event", upload.single("image"), async (req, res) => {
-    try {
-        const { title, desc } = req.body;
 
-        const url = `https://school-erp-zhpk.onrender.com/uploads/${req.file.filename}`;
-
-        const { error } = await supabase
-            .from("events")
-            .insert([{ title, description: desc, image: url, time: Date.now() }]);
-
-        if (error) return res.status(500).json({ error });
-
-        res.json({ message: "Event Uploaded!" });
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
 
 // ----------------------- UPLOAD NOTICE ----------------------------
 app.post("/upload_notice", async (req, res) => {
@@ -878,6 +860,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
