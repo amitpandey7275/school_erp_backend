@@ -232,13 +232,6 @@ app.get("/getTeacherNotices", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
-
-
-
-
-
-
 // ----------------------- DELETE NOTICE ----------------------------
 app.delete("/delete_notice/:id", async (req, res) => {
     try {
@@ -846,6 +839,7 @@ app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
     }
 });
 
+
 // =========================================================================
 //                         SERVER START
 // =========================================================================
@@ -854,6 +848,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
