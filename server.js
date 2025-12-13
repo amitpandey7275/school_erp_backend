@@ -334,14 +334,24 @@ app.post("/uploadTimeTable", async (req, res) => {
 
 
 // ----------------------- GET TIME TABLE (VIEW) Admin and all----------------------------
-
 app.get("/getTimeTable", async (req, res) => {
     try {
-        const class_name = req.query.class_name?.trim();
-        const section = req.query.section?.trim();
+        let class_name = req.query.class_name?.trim();
+        let section = req.query.section?.trim();
 
         if (!class_name || !section) {
             return res.status(400).json({ error: "class_name and section required" });
+        }
+
+        // 🔥 SUPPORT BOTH FORMATS
+        // "Class 1" -> "1"
+        if (class_name.startsWith("Class ")) {
+            class_name = class_name.replace("Class ", "");
+        }
+
+        // "Section A" -> "A"
+        if (section.startsWith("Section ")) {
+            section = section.replace("Section ", "");
         }
 
         const { data, error } = await supabase
@@ -356,13 +366,14 @@ app.get("/getTimeTable", async (req, res) => {
             return res.status(500).json({ error: error.message });
         }
 
-        // ✅ Always return array (empty or filled)
+        // ✅ Always array (empty or filled)
         res.json(data);
 
     } catch (err) {
         res.status(500).json({ error: "Server Error" });
     }
 });
+
 
 
 // =========================================================================
@@ -840,6 +851,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
