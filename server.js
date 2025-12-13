@@ -301,29 +301,47 @@ app.post("/upload_notes", upload.single("pdf"), async (req, res) => {
 });
 
 // ----------------------- UPLOAD TIME TABLE ROW ----------------------------
+// ----------------------- UPLOAD TIME TABLE ----------------------------
 app.post("/uploadTimeTable", async (req, res) => {
     try {
-        const { class_name, section, day, period_no, subject, teacher_name, time_range } = req.body;
+        let {
+            class_name,
+            section,
+            day,
+            period_no,
+            subject,
+            teacher_name,
+            time_range
+        } = req.body;
 
-        if (!class_name || !section || !day || !period_no || !subject || !teacher_name || !time_range) {
+        // safety trim
+        class_name = class_name?.trim();
+        section = section?.trim();
+        day = day?.trim();
+        subject = subject?.trim();
+        teacher_name = teacher_name?.trim();
+        time_range = time_range?.trim();
+
+        if (!class_name || !section || !day || !period_no ||
+            !subject || !teacher_name || !time_range) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
         const { error } = await supabase
             .from("time_table")
-            .insert([
-                {
-                    class_name,
-                    section,
-                    day,
-                    period_no,
-                    subject,
-                    teacher_name,
-                    time_range
-                }
-            ]);
+            .insert([{
+                class_name,          // Class 1
+                section,             // Section A
+                day,
+                period_no: parseInt(period_no),
+                subject,
+                teacher_name,
+                time_range
+            }]);
 
-        if (error) return res.status(500).json({ error: error.message });
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
 
         res.json({ success: true, message: "Time Table Row Added!" });
 
@@ -332,26 +350,14 @@ app.post("/uploadTimeTable", async (req, res) => {
     }
 });
 
-
-// ----------------------- GET TIME TABLE (VIEW) Admin and all----------------------------
+// ----------------------- GET TIME TABLE (Admin / Student / Teacher) ----------------------------
 app.get("/getTimeTable", async (req, res) => {
     try {
-        let class_name = req.query.class_name?.trim();
-        let section = req.query.section?.trim();
+        const class_name = req.query.class_name?.trim();
+        const section = req.query.section?.trim();
 
         if (!class_name || !section) {
             return res.status(400).json({ error: "class_name and section required" });
-        }
-
-        // 🔥 SUPPORT BOTH FORMATS
-        // "Class 1" -> "1"
-        if (class_name.startsWith("Class ")) {
-            class_name = class_name.replace("Class ", "");
-        }
-
-        // "Section A" -> "A"
-        if (section.startsWith("Section ")) {
-            section = section.replace("Section ", "");
         }
 
         const { data, error } = await supabase
@@ -366,15 +372,13 @@ app.get("/getTimeTable", async (req, res) => {
             return res.status(500).json({ error: error.message });
         }
 
-        // ✅ Always array (empty or filled)
+        // Always return array
         res.json(data);
 
     } catch (err) {
         res.status(500).json({ error: "Server Error" });
     }
 });
-
-
 
 // =========================================================================
 //                          ADMIN GALLERY UPLOAD
@@ -851,6 +855,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
