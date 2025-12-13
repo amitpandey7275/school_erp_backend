@@ -301,7 +301,6 @@ app.post("/upload_notes", upload.single("pdf"), async (req, res) => {
 });
 
 // ----------------------- UPLOAD TIME TABLE ROW ----------------------------
-// ----------------------- UPLOAD TIME TABLE ----------------------------
 app.post("/uploadTimeTable", async (req, res) => {
     try {
         let {
@@ -355,9 +354,10 @@ app.get("/getTimeTable", async (req, res) => {
     try {
         const class_name = req.query.class_name?.trim();
         const section = req.query.section?.trim();
+        const day = req.query.day?.trim();
 
-        if (!class_name || !section) {
-            return res.status(400).json({ error: "class_name and section required" });
+        if (!class_name || !section || !day) {
+            return res.status(400).json({ error: "class_name, section and day required" });
         }
 
         const { data, error } = await supabase
@@ -365,14 +365,13 @@ app.get("/getTimeTable", async (req, res) => {
             .select("*")
             .eq("class_name", class_name)
             .eq("section", section)
-            .order("day", { ascending: true })
+            .eq("day", day)
             .order("period_no", { ascending: true });
 
         if (error) {
             return res.status(500).json({ error: error.message });
         }
 
-        // Always return array
         res.json(data);
 
     } catch (err) {
@@ -855,6 +854,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
