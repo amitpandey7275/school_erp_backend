@@ -777,68 +777,6 @@ app.post("/markTeacherAttendance", async (req, res) => {
 
 // =========================================================================
 //                         ADMIN PROFILE
-// =========================================================================
-
-app.get("/getAdmin", async (req, res) => {
-    try {
-        const { email } = req.query;
-
-        const { data, error } = await supabase
-            .from("admins")
-            .select("*")
-            .eq("email", email)
-            .single();
-
-        if (error) return res.status(500).json({ error: error.message });
-
-        res.json(data);
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
-app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
-    try {
-        const { name, phone, email } = req.body;
-
-        let imageUrl = null;
-
-        if (req.file) {
-            const ext = req.file.originalname.split(".").pop();
-            const fileName = `admin_${Date.now()}.${ext}`;
-
-            await supabase.storage
-                .from("admin_images")
-                .upload(fileName, req.file.buffer, {
-                    contentType: req.file.mimetype
-                });
-
-            const { data: urlData } = supabase.storage
-                .from("admin_images")
-                .getPublicUrl(fileName);
-
-            imageUrl = urlData.publicUrl;
-        }
-
-        const { error } = await supabase
-            .from("admins")
-            .update({
-                name,
-                phone,
-                ...(imageUrl && { image: imageUrl })
-            })
-            .eq("email", email);
-
-        if (error) return res.status(500).json({ error: error.message });
-
-        res.json({ success: true, message: "Profile updated!" });
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
 
 // =========================================================================
 //                         SERVER START
@@ -848,6 +786,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
