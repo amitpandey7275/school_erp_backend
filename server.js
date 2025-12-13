@@ -147,17 +147,24 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
 
 // ===========================Adin Photo==============================================
 
+// ======================= GET ADMIN PROFILE =======================
 app.get("/getAdmin", async (req, res) => {
     try {
-        const { email } = req.query;
+        const email = req.query.email?.trim();
+
+        if (!email) {
+            return res.status(400).json({ error: "Email required" });
+        }
 
         const { data, error } = await supabase
             .from("admins")
-            .select("*")
+            .select("name, email, phone, qualification, address, role, image")
             .eq("email", email)
             .single();
 
-        if (error) return res.status(500).json({ error: error.message });
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
 
         res.json(data);
 
@@ -166,48 +173,65 @@ app.get("/getAdmin", async (req, res) => {
     }
 });
 
-app.post("/updateAdminProfile", upload.single("image"), async (req, res) => {
-    try {
-        const { name, phone, email } = req.body;
+// ======================= UPDATE ADMIN PROFILE PHOTO =======================
+app.post(
+    "/updateAdminProfileImage",
+    upload.single("image"),
+    async (req, res) => {
 
-        let imageUrl = null;
+        try {
+            const email = req.body.email;
 
-        if (req.file) {
+            if (!email || !req.file) {
+                return res.status(400).json({
+                    error: "Email and image required"
+                });
+            }
+
+            // ✅ SAFE filename (FIXED)
             const ext = req.file.originalname.split(".").pop();
-            const fileName = admin_${Date.now()}.${ext};
+            const fileName = `admin_${Date.now()}.${ext}`;
 
-            await supabase.storage
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
                 .from("admin_images")
                 .upload(fileName, req.file.buffer, {
-                    contentType: req.file.mimetype
+                    contentType: req.file.mimetype,
+                    upsert: true
                 });
 
+            if (uploadError) {
+                return res.status(500).json({ error: uploadError.message });
+            }
+
+            // Get public URL
             const { data: urlData } = supabase.storage
                 .from("admin_images")
                 .getPublicUrl(fileName);
 
-            imageUrl = urlData.publicUrl;
+            const imageUrl = urlData.publicUrl;
+
+            // Update DB
+            const { error } = await supabase
+                .from("admins")
+                .update({ image: imageUrl })
+                .eq("email", email);
+
+            if (error) {
+                return res.status(500).json({ error: error.message });
+            }
+
+            res.json({
+                success: true,
+                message: "Profile photo updated",
+                image: imageUrl
+            });
+
+        } catch (err) {
+            res.status(500).json({ error: "Server error" });
         }
-
-        const { error } = await supabase
-            .from("admins")
-            .update({
-                name,
-                phone,
-                ...(imageUrl && { image: imageUrl })
-            })
-            .eq("email", email);
-
-        if (error) return res.status(500).json({ error: error.message });
-
-        res.json({ success: true, message: "Profile updated!" });
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
     }
-});
-
-
+);
 // ----------------------- TEACHER PROFILE ----------------------------
 app.get("/getTeacherProfile", async (req, res) => {
     try {
@@ -848,6 +872,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
