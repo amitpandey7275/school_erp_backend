@@ -87,28 +87,6 @@ app.post("/get_role", async (req, res) => {
     }
 });
 
-// ----------------------- ADD STUDENT ----------------------------
-app.post("/add_student", async (req, res) => {
-    try {
-        const { name, email, password, cls, phone } = req.body;
-
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) return res.status(400).json({ error: error.message });
-
-        const userId = data.user.id;
-
-        const { error: dbError } = await supabase
-            .from("users")
-            .insert([{ id: userId, name, email, phone, class: cls, role: "student", created_at: Date.now() }]);
-
-        if (dbError) return res.status(500).json({ error: dbError.message });
-
-        res.json({ message: "Student Added Successfully!", userId });
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
 
 // ----------------------- STUDENT PROFILE ----------------------------
 app.get("/get_student_profile", async (req, res) => {
@@ -166,26 +144,7 @@ app.post("/update_student_photo", upload.single("image"), async (req, res) => {
     }
 });
 
-// ----------------------- ADD TEACHER ----------------------------
-app.post("/add_teacher", async (req, res) => {
-    try {
-        const { name, email, password, phone } = req.body;
 
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) return res.status(400).json({ error: error.message });
-
-        const { error: dbError } = await supabase
-            .from("users")
-            .insert([{ id: data.user.id, name, email, phone, role: "teacher", created_at: Date.now() }]);
-
-        if (dbError) return res.status(500).json({ error: dbError.message });
-
-        res.json({ message: "Teacher Added Successfully!", userId: data.user.id });
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
 
 // ----------------------- TEACHER PROFILE ----------------------------
 app.get("/getTeacherProfile", async (req, res) => {
@@ -206,31 +165,6 @@ app.get("/getTeacherProfile", async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 });
-
-// ----------------------- ADD COMMON USER ----------------------------
-app.post("/add_common_user", async (req, res) => {
-    try {
-        const { name, email, password, phone } = req.body;
-
-        const { data, error } = await supabase.auth.signUp({ email, password });
-
-        if (error) return res.status(400).json({ error: error.message });
-
-        const { error: dbError } = await supabase
-            .from("users")
-            .insert([{ id: data.user.id, name, email, phone, role: "common", created_at: Date.now() }]);
-
-        if (dbError) return res.status(500).json({ error: dbError.message });
-
-        res.json({ message: "Common User Added!", userId: data.user.id });
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
-
-
 // ----------------------- UPLOAD NOTICE ----------------------------
 app.post("/upload_notice", async (req, res) => {
     try {
@@ -398,6 +332,34 @@ app.post("/uploadTimeTable", async (req, res) => {
     }
 });
 
+
+// ----------------------- GET TIME TABLE (VIEW) Admin and all----------------------------
+app.get("/getTimeTable", async (req, res) => {
+    try {
+        const { class_name, section } = req.query;
+
+        if (!class_name || !section) {
+            return res.status(400).json({ error: "class_name and section required" });
+        }
+
+        const { data, error } = await supabase
+            .from("time_table")
+            .select("*")
+            .eq("class_name", class_name)
+            .eq("section", section)
+            .order("day", { ascending: true })
+            .order("period_no", { ascending: true });
+
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: "Server Error" });
+    }
+});
 
 // =========================================================================
 //                          ADMIN GALLERY UPLOAD
@@ -874,6 +836,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
