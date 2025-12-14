@@ -650,8 +650,6 @@ app.get("/getTeacherHomeworks", async (req, res) => {
 
 // =========================================================================
 //                         CLASSWORK UPLOAD
-// =========================================================================
-
 app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
     try {
         const { title, description, class_name, section_name, subject } = req.body;
@@ -663,15 +661,17 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
 
             const { error: uploadErr } = await supabase.storage
                 .from("classwork")
-                .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype
+                });
 
-            if (uploadErr) return res.status(500).json({ error: "File upload failed" });
+            if (uploadErr) return res.status(500).json({ error: uploadErr.message });
 
-            const { data: urlData } = supabase.storage
+            const { data } = supabase.storage
                 .from("classwork")
                 .getPublicUrl(fileName);
 
-            fileUrl = urlData.publicUrl;
+            fileUrl = data.publicUrl;
         }
 
         const { error } = await supabase
@@ -688,35 +688,31 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
 
         if (error) return res.status(500).json({ error: error.message });
 
-        res.json({
-            success: true,
-            message: "Classwork Uploaded Successfully",
-            fileUrl
-        });
+        res.json({ success: true });
 
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
-// ----------------------- GET CLASSWORK ----------------------------
 app.get("/getClasswork", async (req, res) => {
     try {
-        const { class: className, section } = req.query;
+        const { class: className, section, subject } = req.query;
 
         const { data, error } = await supabase
             .from("classwork")
             .select("*")
             .eq("class_name", className)
             .eq("section_name", section)
+            .eq("subject", subject)
             .order("created_at", { ascending: false });
 
         if (error) return res.status(500).json({ error: error.message });
 
         res.json(data);
 
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -878,6 +874,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
