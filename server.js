@@ -361,6 +361,7 @@ app.put("/update_notice/:id", async (req, res) => {
 });
 
 // ----------------------- TEACHER UPLOAD NOTES ----------------------------
+// ----------------------- UPLOAD NOTES ----------------------------
 app.post("/teacherUploadNotes", async (req, res) => {
     try {
         const { class_name, subject, title, pdf_url } = req.body;
@@ -381,12 +382,13 @@ app.post("/teacherUploadNotes", async (req, res) => {
 
         if (error) return res.status(500).json({ error });
 
-        res.json({ success: true, message: "Notes Uploaded" });
+        res.json({ success: true, message: "Notes Uploaded!" });
 
     } catch (err) {
         res.status(500).json({ error: "Server error" });
     }
 });
+
 
 
 // ----------------------- GET TEACHER NOTES ----------------------------
@@ -973,6 +975,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
