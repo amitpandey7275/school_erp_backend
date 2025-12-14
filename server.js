@@ -360,24 +360,52 @@ app.put("/update_notice/:id", async (req, res) => {
     }
 });
 
-// ----------------------- UPLOAD NOTES ----------------------------
-app.post("/upload_notes", upload.single("pdf"), async (req, res) => {
+// ----------------------- TEACHER UPLOAD NOTES ----------------------------
+app.post("/teacherUploadNotes", async (req, res) => {
     try {
-        const { title, cls } = req.body;
-        const url = `https://school-erp-zhpk.onrender.com/uploads/${req.file.filename}`;
+        const { class_name, subject, title, pdf_url } = req.body;
+
+        if (!title || !class_name || !subject) {
+            return res.status(400).json({ error: "Missing fields" });
+        }
 
         const { error } = await supabase
             .from("notes")
-            .insert([{ class: cls, title, pdfUrl: url, time: Date.now() }]);
+            .insert([{
+                class_name,
+                subject,
+                title,
+                pdf_url: pdf_url || "",
+                time: Date.now()
+            }]);
 
         if (error) return res.status(500).json({ error });
 
-        res.json({ message: "Notes Uploaded!" });
+        res.json({ success: true, message: "Notes Uploaded" });
 
     } catch (err) {
         res.status(500).json({ error: "Server error" });
     }
 });
+
+
+// ----------------------- GET TEACHER NOTES ----------------------------
+app.get("/getTeacherUploadNotes", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("notes")
+            .select("*")
+            .order("time", { ascending: false });
+
+        if (error) return res.status(500).json({ error });
+
+        res.json(data);
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 
 // ----------------------- UPLOAD TIME TABLE ROW ----------------------------
 app.post("/uploadTimeTable", async (req, res) => {
@@ -945,6 +973,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
