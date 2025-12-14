@@ -247,8 +247,9 @@ app.get("/getTeacherProfile", async (req, res) => {
         const { data, error } = await supabase
             .from("teachers")
             .select(`
+                id,
                 uid,
-                full_name,
+                name,
                 email,
                 phone,
                 qualification,
@@ -1148,6 +1149,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
