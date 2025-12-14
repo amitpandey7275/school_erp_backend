@@ -901,48 +901,85 @@ app.delete("/deleteClasswork/:id", async (req, res) => {
 
 //                         TEACHER NOTES
 // =========================================================================
-
-app.post("/teacherUploadNotes", async (req, res) => {
+// ================= UPLOAD NOTES =================
+app.post("/uploadTeacherNotes", async (req, res) => {
     try {
-        const { class_name, subject, title, pdf_url, teacher_id } = req.body;
+        const { teacher_id, class_name, subject, title, pdf_url } = req.body;
 
-        const { data, error } = await supabase
-            .from("TeacherUploadNotes")
-            .insert([{ class_name, subject, title, pdf_url, teacher_id }]);
+        if (!teacher_id || !class_name || !subject || !title) {
+            return res.status(400).json({ error: "Missing fields" });
+        }
+
+        const { error } = await supabase
+            .from("teacher_notes")
+            .insert([{
+                teacher_id,
+                class_name,
+                subject,
+                title,
+                pdf_url
+            }]);
 
         if (error) return res.status(500).json({ error: error.message });
 
-        res.json({ message: "Notes Uploaded Successfully", data });
+        res.json({ success: true });
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
-// ----------------------- GET TEACHER NOTES ----------------------------
-app.get("/getTeacherUploadNotes", async (req, res) => {
+// ================= GET NOTES =================
+app.get("/getTeacherNotes", async (req, res) => {
     try {
-        const { teacher_id } = req.query;
+        const { teacher_id, class_name, subject } = req.query;
 
-        let query = supabase
-            .from("TeacherUploadNotes")
+        const { data, error } = await supabase
+            .from("teacher_notes")
             .select("*")
-            .order("created_at", { ascending: false });
-
-        if (teacher_id) query = query.eq("teacher_id", teacher_id);
-
-        const { data, error } = await query;
+            .eq("teacher_id", teacher_id)
+            .eq("class_name", class_name)
+            .eq("subject", subject)
+            .order("id", { ascending: false });
 
         if (error) return res.status(500).json({ error: error.message });
 
         res.json(data);
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
-// =========================================================================
+// ================= UPDATE NOTES =================
+app.put("/updateTeacherNotes/:id", async (req, res) => {
+    const { id } = req.params;
+    const { title } = req.body;
+
+    const { error } = await supabase
+        .from("teacher_notes")
+        .update({ title })
+        .eq("id", id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+});
+
+// ================= DELETE NOTES =================
+app.delete("/deleteTeacherNotes/:id", async (req, res) => {
+    const { id } = req.params;
+
+    const { error } = await supabase
+        .from("teacher_notes")
+        .delete()
+        .eq("id", id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+});
+
 //                         GET STUDENTS
 // =========================================================================
 
@@ -1056,6 +1093,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
