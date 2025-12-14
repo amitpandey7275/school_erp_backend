@@ -647,6 +647,34 @@ app.get("/getTeacherHomeworks", async (req, res) => {
     }
 });
 
+// ---------------------DELETE HOMEWORK--------------
+app.delete("/deleteHomework/:id", async (req, res) => {
+    const { id } = req.params;
+
+    const { error } = await supabase
+        .from("homework")
+        .delete()
+        .eq("id", id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+});
+
+//------------- UPDATE HOMEWORK--------------
+app.put("/updateHomework/:id", async (req, res) => {
+    const { id } = req.params;
+    const { homework_text } = req.body;
+
+    const { error } = await supabase
+        .from("homework")
+        .update({ homework_text })
+        .eq("id", id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+});
 
 // =========================================================================
 //                         CLASSWORK UPLOAD
@@ -917,6 +945,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
