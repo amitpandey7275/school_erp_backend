@@ -589,7 +589,7 @@ app.get("/get_teachers", async (req, res) => {
     }
 });
 
-//                         HOMEWORK SYSTEM
+//                         Teacher UPLOAD HOMEWORK 
 // =========================================================================
 
 app.post("/uploadHomework", async (req, res) => {
@@ -623,7 +623,11 @@ app.post("/uploadHomework", async (req, res) => {
 // ----------------------- GET TEACHER HOMEWORK ----------------------------
 app.get("/getTeacherHomeworks", async (req, res) => {
     try {
-        const { teacher_id, class_name, section } = req.query;
+        const { teacher_id, class_name, section, subject } = req.query;
+
+        if (!teacher_id || !class_name || !section || !subject) {
+            return res.status(400).json({ error: "Missing query params" });
+        }
 
         const { data, error } = await supabase
             .from("homework")
@@ -631,16 +635,18 @@ app.get("/getTeacherHomeworks", async (req, res) => {
             .eq("teacher_id", teacher_id)
             .eq("class_name", class_name)
             .eq("section", section)
+            .eq("subject", subject)
             .order("id", { ascending: false });
 
-        if (error) return res.status(500).json({ message: error.message });
+        if (error) return res.status(500).json({ error: error.message });
 
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
+
 
 // =========================================================================
 //                         CLASSWORK UPLOAD
@@ -872,6 +878,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
