@@ -240,20 +240,36 @@ app.get("/getTeacherProfile", async (req, res) => {
     try {
         const uid = req.query.uid;
 
+        if (!uid) {
+            return res.status(400).json({ message: "UID required" });
+        }
+
         const { data, error } = await supabase
             .from("teachers")
-            .select("*")
+            .select(`
+                uid,
+                full_name,
+                email,
+                phone,
+                qualification,
+                subject,
+                experience,
+                profile_image_url
+            `)
             .eq("uid", uid)
             .single();
 
-        if (error || !data) return res.json({ success: false, message: "Teacher not found" });
+        if (error || !data) {
+            return res.status(404).json({ message: "Teacher not found" });
+        }
 
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ message: err.message });
     }
 });
+
 // ----------------------- UPLOAD NOTICE ----------------------------
 app.post("/upload_notice", async (req, res) => {
     try {
@@ -1132,6 +1148,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
