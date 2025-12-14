@@ -901,7 +901,7 @@ app.delete("/deleteClasswork/:id", async (req, res) => {
 
 //                         TEACHER NOTES
 // =========================================================================
-// ================= UPLOAD TEACHER NOTES =================
+// ====================== UPLOAD TEACHER NOTES ======================
 app.post("/uploadTeacherNotes", upload.single("pdf"), async (req, res) => {
     try {
         const { teacher_id, class_name, subject, title } = req.body;
@@ -910,29 +910,32 @@ app.post("/uploadTeacherNotes", upload.single("pdf"), async (req, res) => {
             return res.status(400).json({ error: "Missing fields" });
         }
 
-        let pdfUrl = "";
+        let pdfUrl = null;
 
+        // ---------- PDF UPLOAD ----------
         if (req.file) {
             const fileName =
-                "notes/" + Date.now() + "_" + req.file.originalname;
+                "teacher_notes/" + Date.now() + "_" + req.file.originalname;
 
             const { error: uploadErr } = await supabase.storage
-                .from("notes")
+                .from("teacher_notes")
                 .upload(fileName, req.file.buffer, {
                     contentType: req.file.mimetype
                 });
 
             if (uploadErr) {
+                console.log(uploadErr);
                 return res.status(500).json({ error: "PDF upload failed" });
             }
 
             const { data } = supabase.storage
-                .from("notes")
+                .from("teacher_notes")
                 .getPublicUrl(fileName);
 
             pdfUrl = data.publicUrl;
         }
 
+        // ---------- DB INSERT ----------
         const { error } = await supabase
             .from("teacher_notes")
             .insert([{
@@ -943,12 +946,16 @@ app.post("/uploadTeacherNotes", upload.single("pdf"), async (req, res) => {
                 pdf_url: pdfUrl
             }]);
 
-        if (error) return res.status(500).json({ error: error.message });
+        if (error) {
+            console.log(error);
+            return res.status(500).json({ error: error.message });
+        }
 
         res.json({ success: true });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.log(err);
+        res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -1116,6 +1123,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
