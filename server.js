@@ -901,13 +901,36 @@ app.delete("/deleteClasswork/:id", async (req, res) => {
 
 //                         TEACHER NOTES
 // =========================================================================
-// ================= UPLOAD NOTES =================
-app.post("/uploadTeacherNotes", async (req, res) => {
+// ================= UPLOAD TEACHER NOTES =================
+app.post("/uploadTeacherNotes", upload.single("pdf"), async (req, res) => {
     try {
-        const { teacher_id, class_name, subject, title, pdf_url } = req.body;
+        const { teacher_id, class_name, subject, title } = req.body;
 
         if (!teacher_id || !class_name || !subject || !title) {
             return res.status(400).json({ error: "Missing fields" });
+        }
+
+        let pdfUrl = "";
+
+        if (req.file) {
+            const fileName =
+                "notes/" + Date.now() + "_" + req.file.originalname;
+
+            const { error: uploadErr } = await supabase.storage
+                .from("notes")
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype
+                });
+
+            if (uploadErr) {
+                return res.status(500).json({ error: "PDF upload failed" });
+            }
+
+            const { data } = supabase.storage
+                .from("notes")
+                .getPublicUrl(fileName);
+
+            pdfUrl = data.publicUrl;
         }
 
         const { error } = await supabase
@@ -917,15 +940,15 @@ app.post("/uploadTeacherNotes", async (req, res) => {
                 class_name,
                 subject,
                 title,
-                pdf_url
+                pdf_url: pdfUrl
             }]);
 
         if (error) return res.status(500).json({ error: error.message });
 
         res.json({ success: true });
 
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -1093,6 +1116,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
