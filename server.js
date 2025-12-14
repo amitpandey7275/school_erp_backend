@@ -361,53 +361,131 @@ app.put("/update_notice/:id", async (req, res) => {
 });
 
 // ----------------------- TEACHER UPLOAD NOTES ----------------------------
-// ----------------------- UPLOAD NOTES ----------------------------
-app.post("/teacherUploadNotes", async (req, res) => {
+// ======================= UPLOAD TEACHER NOTES =======================
+app.post("/uploadTeacherNotes", async (req, res) => {
     try {
-        const { class_name, subject, title, pdf_url } = req.body;
+        const { class_name, subject, title, teacher_id, pdf_url } = req.body;
 
-        if (!title || !class_name || !subject) {
-            return res.status(400).json({ error: "Missing fields" });
+        if (!class_name || !subject || !title || !teacher_id) {
+            return res.status(400).json({ error: "Missing required fields" });
         }
 
-        const { error } = await supabase
-            .from("notes")
+        const { data, error } = await supabase
+            .from("teacher_notes")
             .insert([{
                 class_name,
                 subject,
                 title,
+                teacher_id,
                 pdf_url: pdf_url || "",
-                time: Date.now()
+                date: new Date().toISOString().split("T")[0]
             }]);
 
-        if (error) return res.status(500).json({ error });
+        if (error) return res.status(400).json({ error: error.message });
 
-        res.json({ success: true, message: "Notes Uploaded!" });
+        res.json({
+            success: true,
+            message: "Notes uploaded",
+            data
+        });
 
     } catch (err) {
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ error: err.message });
     }
+});
+// ================= UPLOAD TEACHER NOTES =================
+app.post("/uploadTeacherNotes", upload.single("pdf"), async (req, res) => {
+  try {
+    const { teacher_id, class_name, subject, title } = req.body;
+
+    if (!teacher_id || !class_name || !subject || !title) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    let pdfUrl = null;
+
+    if (req.file) {
+      const fileName = `notes/${Date.now()}_${req.file.originalname}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("teacher_notes")
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype
+        });
+
+      if (uploadErr) return res.status(500).json({ error: uploadErr.message });
+
+      const { data } = supabase.storage
+        .from("teacher_notes")
+        .getPublicUrl(fileName);
+
+      pdfUrl = data.publicUrl;
+    }
+
+    const { error } = await supabase
+      .from("teacher_notes")
+      .insert([{
+        teacher_id,
+        class_name,
+        subject,
+        title,
+        pdf_url: pdfUrl
+      }]);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
+// ================= GET TEACHER NOTES =================
+app.get("/getTeacherNotes", async (req, res) => {
+  const { teacher_id, class_name, subject } = req.query;
 
-// ----------------------- GET TEACHER NOTES ----------------------------
-app.get("/getTeacherUploadNotes", async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from("notes")
-            .select("*")
-            .order("time", { ascending: false });
+  const { data, error } = await supabase
+    .from("teacher_notes")
+    .select("*")
+    .eq("teacher_id", teacher_id)
+    .eq("class_name", class_name)
+    .eq("subject", subject)
+    .order("id", { ascending: false });
 
-        if (error) return res.status(500).json({ error });
-
-        res.json(data);
-
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
+
+// ================= DELETE NOTES =================
+app.delete("/deleteTeacherNotes/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const { error } = await supabase
+    .from("teacher_notes")
+    .delete()
+    .eq("id", id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+
+// ================= UPDATE NOTES =================
+app.put("/updateTeacherNotes/:id", async (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
+
+  const { error } = await supabase
+    .from("teacher_notes")
+    .update({ title })
+    .eq("id", id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
 
 // ----------------------- UPLOAD TIME TABLE ROW ----------------------------
 app.post("/uploadTimeTable", async (req, res) => {
@@ -975,6 +1053,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
