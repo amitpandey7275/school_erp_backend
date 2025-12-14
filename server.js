@@ -695,6 +695,7 @@ app.post("/uploadClasswork", upload.single("file"), async (req, res) => {
     }
 });
 
+// =====================get Classwork ====================================================
 app.get("/getClasswork", async (req, res) => {
     try {
         const { class: className, section, subject } = req.query;
@@ -716,7 +717,49 @@ app.get("/getClasswork", async (req, res) => {
     }
 });
 
-// =========================================================================
+
+// ==========================edit classwork===============================================
+app.put("/updateClasswork/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description } = req.body;
+
+        const { error } = await supabase
+            .from("classwork")
+            .update({
+                title,
+                description
+            })
+            .eq("id", id);
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({ success: true, message: "Classwork updated" });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==================================deleet cw=======================================
+app.delete("/deleteClasswork/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from("classwork")
+            .delete()
+            .eq("id", id);
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        res.json({ success: true, message: "Classwork deleted" });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 //                         TEACHER NOTES
 // =========================================================================
 
@@ -874,6 +917,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
