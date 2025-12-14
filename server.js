@@ -901,63 +901,72 @@ app.delete("/deleteClasswork/:id", async (req, res) => {
 
 //                         TEACHER NOTES
 // =========================================================================
-// ====================== UPLOAD TEACHER NOTES ======================
-app.post("/uploadTeacherNotes", upload.single("pdf"), async (req, res) => {
+// ================= UPLOAD TEACHER NOTES =================
+app.post(
+  "/uploadTeacherNotes",
+  upload.single("pdf"),
+  async (req, res) => {
+
     try {
-        const { teacher_id, class_name, subject, title } = req.body;
+      const { teacher_id, class_name, subject, title } = req.body;
 
-        if (!teacher_id || !class_name || !subject || !title) {
-            return res.status(400).json({ error: "Missing fields" });
-        }
+      if (!teacher_id || !class_name || !subject || !title) {
+        return res.status(400).json({ error: "Missing fields" });
+      }
 
-        let pdfUrl = null;
+      if (!req.file) {
+        return res.status(400).json({ error: "PDF not received" });
+      }
 
-        // ---------- PDF UPLOAD ----------
-        if (req.file) {
-            const fileName =
-                "teacher_notes/" + Date.now() + "_" + req.file.originalname;
+      // 🔹 Upload to Supabase Storage
+      const fileName =
+        "notes/" + Date.now() + "_" + req.file.originalname;
 
-            const { error: uploadErr } = await supabase.storage
-                .from("teacher_notes")
-                .upload(fileName, req.file.buffer, {
-                    contentType: req.file.mimetype
-                });
+      const { error: uploadErr } =
+        await supabase.storage
+          .from("teacher_notes")
+          .upload(fileName, req.file.buffer, {
+            contentType: req.file.mimetype
+          });
 
-            if (uploadErr) {
-                console.log(uploadErr);
-                return res.status(500).json({ error: "PDF upload failed" });
-            }
+      if (uploadErr) {
+        console.log("STORAGE ERROR:", uploadErr);
+        return res.status(500).json({ error: uploadErr.message });
+      }
 
-            const { data } = supabase.storage
-                .from("teacher_notes")
-                .getPublicUrl(fileName);
+      const { data: urlData } =
+        supabase.storage
+          .from("teacher_notes")
+          .getPublicUrl(fileName);
 
-            pdfUrl = data.publicUrl;
-        }
+      const pdfUrl = urlData.publicUrl;
 
-        // ---------- DB INSERT ----------
-        const { error } = await supabase
-            .from("teacher_notes")
-            .insert([{
-                teacher_id,
-                class_name,
-                subject,
-                title,
-                pdf_url: pdfUrl
-            }]);
+      // 🔹 Insert into DB
+      const { error: dbErr } =
+        await supabase
+          .from("teacher_notes")
+          .insert([{
+            teacher_id,
+            class_name,
+            subject,
+            title,
+            pdf_url: pdfUrl
+          }]);
 
-        if (error) {
-            console.log(error);
-            return res.status(500).json({ error: error.message });
-        }
+      if (dbErr) {
+        console.log("DB ERROR:", dbErr);
+        return res.status(500).json({ error: dbErr.message });
+      }
 
-        res.json({ success: true });
+      res.json({ success: true });
 
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ error: "Server error" });
+      console.log("SERVER CRASH:", err);
+      res.status(500).json({ error: "Server crashed" });
     }
-});
+  }
+);
+
 
 // ================= GET NOTES =================
 app.get("/getTeacherNotes", async (req, res) => {
@@ -1123,6 +1132,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
