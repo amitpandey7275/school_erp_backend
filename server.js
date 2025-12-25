@@ -94,24 +94,22 @@ app.post("/get_role", async (req, res) => {
 // ----------------------- STUDENT PROFILE ----------------------------
 app.get("/get_student_profile", async (req, res) => {
   try {
-    const { class_name, section, roll_no } = req.query;
+    const { auth_uid } = req.query;
 
     const { data, error } = await supabase
       .from("students")
       .select("*")
-      .eq("class_name", class_name)
-      .eq("section", section)
-      .eq("roll_no", roll_no)
+      .eq("auth_uid", auth_uid)
       .single();
 
     if (error) return res.status(404).json({ error: error.message });
-
     res.json(data);
 
-  } catch (err) {
+  } catch (e) {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 
 // ----------------------- UPDATE STUDENT PHOTO ----------------------------
@@ -1147,6 +1145,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
