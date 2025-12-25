@@ -93,23 +93,26 @@ app.post("/get_role", async (req, res) => {
 
 // ----------------------- STUDENT PROFILE ----------------------------
 app.get("/get_student_profile", async (req, res) => {
-    try {
-        const uid = req.query.auth_uid;
+  try {
+    const { class_name, section, roll_no } = req.query;
 
-        const { data, error } = await supabase
-            .from("students")
-            .select("*")
-            .eq("auth_uid", uid)
-            .single();
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("class_name", class_name)
+      .eq("section", section)
+      .eq("roll_no", roll_no)
+      .single();
 
-        if (error) return res.json({ error: error.message });
+    if (error) return res.status(404).json({ error: error.message });
 
-        res.json(data);
+    res.json(data);
 
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
+
 
 // ----------------------- UPDATE STUDENT PHOTO ----------------------------
 app.post("/update_student_photo", upload.single("image"), async (req, res) => {
@@ -1050,13 +1053,8 @@ app.get("/getStudents", async (req, res) => {
       .order("section", { ascending: true })
       .order("roll_no", { ascending: true });
 
-    if (class_name && class_name !== "ALL") {
-      query = query.eq("class_name", class_name);
-    }
-
-    if (section && section !== "ALL") {
-      query = query.eq("section", section);
-    }
+    if (class_name) query = query.eq("class_name", class_name);
+    if (section) query = query.eq("section", section);
 
     const { data, error } = await query;
 
@@ -1149,6 +1147,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
