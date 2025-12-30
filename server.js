@@ -6,29 +6,14 @@ const cors = require("cors");
 
 const app = express();
 
-// ===== CORS CONFIG (SAFE) =====
+/* ===== SIMPLE CORS (TESTING MODE) ===== */
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow browser + Postman + server-to-server
-    if (!origin) return callback(null, true);
-
-    const allowedOrigins = [
-      "http://localhost:55767",   // web frontend
-      "http://localhost:3000"     // backend
-    ];
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed"));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  origin: "*",   // 🔥 sab allow (local testing ke liye)
 }));
 
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
+
 
 
 
@@ -1164,6 +1149,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
