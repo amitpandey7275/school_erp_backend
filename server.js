@@ -6,18 +6,30 @@ const cors = require("cors");
 
 const app = express();
 
-// ✅ SAFE CORS (Render + Local both)
+const cors = require("cors");
+
 app.use(cors({
-  origin: [
-    "http://localhost:55767",      // local frontend
-    "http://localhost:3000",       // local backend self
-    "https://your-frontend.vercel.app" // future deploy (optional)
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: function (origin, callback) {
+    // allow browser + Postman + server-to-server
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      "http://localhost:55767",   // web frontend
+      "http://localhost:3000"     // backend itself
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
+
 app.use("/uploads", express.static("uploads"));
 
 
@@ -1153,6 +1165,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
