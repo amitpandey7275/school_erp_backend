@@ -1,19 +1,21 @@
 require("dotenv").config();
-const multer = require("multer");
 const express = require("express");
-const path = require("path");
+const multer = require("multer");
 const { createClient } = require("@supabase/supabase-js");
 const cors = require("cors");
+
 const app = express();
 
-// ======= CORS (FIXED) =======
+// ✅ SAFE CORS (Render + Local both)
 app.use(cors({
-    origin: "http://localhost:55767",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
+  origin: [
+    "http://localhost:55767",      // local frontend
+    "http://localhost:3000",       // local backend self
+    "https://your-frontend.vercel.app" // future deploy (optional)
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
-app.options("*", cors());
 
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
@@ -1151,6 +1153,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
