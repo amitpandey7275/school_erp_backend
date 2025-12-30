@@ -6,8 +6,7 @@ const cors = require("cors");
 
 const app = express();
 
-const cors = require("cors");
-
+// ===== CORS CONFIG (SAFE) =====
 app.use(cors({
   origin: function (origin, callback) {
     // allow browser + Postman + server-to-server
@@ -15,7 +14,7 @@ app.use(cors({
 
     const allowedOrigins = [
       "http://localhost:55767",   // web frontend
-      "http://localhost:3000"     // backend itself
+      "http://localhost:3000"     // backend
     ];
 
     if (allowedOrigins.includes(origin)) {
@@ -29,8 +28,8 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
 app.use("/uploads", express.static("uploads"));
+
 
 
 // ----------------------- SUPABASE CONNECTION ----------------------------
@@ -1165,6 +1164,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
