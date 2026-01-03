@@ -82,7 +82,7 @@ app.post("/get_role", async (req, res) => {
         const { data, error } = await supabase
             .from("users")
             .select("role")
-            .eq("id", id)
+            .eq("auth_id", auth_id)
             .single();
 
         if (error) return res.status(400).json({ error: error.message });
@@ -1149,6 +1149,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
