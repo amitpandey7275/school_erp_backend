@@ -1219,6 +1219,35 @@ app.get("/api/student/attendance-summary", async (req, res) => {
   }
 });
 
+
+
+
+
+//----------------calender student attendance
+app.get("/api/student/attendance-calendar", async (req, res) => {
+  try {
+    const { student_id, year, month } = req.query;
+    // month = 1-12
+
+    const start = `${year}-${String(month).padStart(2, "0")}-01`;
+    const end   = `${year}-${String(month).padStart(2, "0")}-31`;
+
+    const { data, error } = await supabase
+      .from("student_attendance")
+      .select("date, status")
+      .eq("student_id", student_id)
+      .gte("date", start)
+      .lte("date", end);
+
+    if (error) return res.status(500).json({ error });
+
+    res.json(data || []);
+  } catch {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
 // ----------------------- MARK TEACHER ATTENDANCE (ADMIN) ----------------------------
 app.post("/markTeacherAttendance", async (req, res) => {
     try {
@@ -1275,6 +1304,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
