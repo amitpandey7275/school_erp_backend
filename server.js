@@ -14,17 +14,6 @@ app.use(cors({
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-
-const { Pool } = require("pg");
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-
-
-
 // ----------------------- SUPABASE CONNECTION ----------------------------
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -1269,39 +1258,28 @@ app.post("/markTeacherAttendance", async (req, res) => {
     }
 });
 
-
-
-
-
-
-
-
-
-
-/* ---------- GET ALL CLASSES ---------- */
+/* ---------- GET CLASSES ---------- */
 app.get("/api/admin/classes", async (req, res) => {
-  try {
-    const result = await pool.query(
-      "SELECT class_id, class_name FROM classes ORDER BY class_name"
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { data, error } = await supabase
+    .from("classes")
+    .select("class_id, class_name")
+    .order("class_name");
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
 });
 
 /* ---------- GET SECTIONS BY CLASS ---------- */
 app.get("/api/admin/sections/:class_id", async (req, res) => {
   const { class_id } = req.params;
-  try {
-    const result = await pool.query(
-      "SELECT section_id, section_name FROM sections WHERE class_id=$1",
-      [class_id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+
+  const { data, error } = await supabase
+    .from("sections")
+    .select("section_id, section_name")
+    .eq("class_id", class_id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
 });
 
 /* =================================================
@@ -1312,121 +1290,112 @@ app.get("/api/admin/sections/:class_id", async (req, res) => {
 app.get("/api/admin/fees", async (req, res) => {
   const { class_id, section_id, month, fee_type } = req.query;
 
-  let conditions = [];
-  let values = [];
+  let query = supabase
+    .from("fees")
+    .select(`
+      id,
+      fee_type,
+      month,
+      amount,
+      status,
+      students (
+        name,
+        class_id,
+        section_id,
+        classes ( class_name ),
+        sections ( section_name )
+      )
+    `);
 
-  if (class_id && class_id !== "ALL") {
-    values.push(class_id);
-    conditions.push(`s.class_id = $${values.length}`);
-  }
+  if (month && month !== "ALL") query = query.eq("month", month);
+  if (fee_type && fee_type !== "ALL") query = query.eq("fee_type", fee_type);
 
-  if (section_id && section_id !== "ALL") {
-    values.push(section_id);
-    conditions.push(`s.section_id = $${values.length}`);
-  }
+  const { data, error } = await query;
 
-  if (month && month !== "ALL") {
-    values.push(month);
-    conditions.push(`f.month = $${values.length}`);
-  }
+  if (error) return res.status(500).json({ error: error.message });
 
-  if (fee_type && fee_type !== "ALL") {
-    values.push(fee_type);
-    conditions.push(`f.fee_type = $${values.length}`);
-  }
+  /* FILTER class / section manually */
+  const filtered = (data || []).filter(f => {
+    const s = f.students;
+    if (!s) return false;
 
-  const where =
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    if (class_id && class_id !== "ALL" && s.class_id !== class_id) return false;
+    if (section_id && section_id !== "ALL" && s.section_id !== section_id) return false;
 
-  try {
-    const result = await pool.query(
-      `
-      SELECT
-        f.id,
-        f.fee_type,
-        f.month,
-        f.amount,
-        f.status,
-        s.name AS student_name,
-        c.class_name,
-        sec.section_name
-      FROM fees f
-      JOIN students s ON f.student_id = s.auth_id
-      JOIN classes c ON s.class_id = c.class_id
-      JOIN sections sec ON s.section_id = sec.section_id
-      ${where}
-      ORDER BY s.name
-      `,
-      values
-    );
+    return true;
+  });
 
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+  /* FLATTEN RESPONSE (frontend friendly) */
+  const result = filtered.map(f => ({
+    id: f.id,
+    fee_type: f.fee_type,
+    month: f.month,
+    amount: f.amount,
+    status: f.status,
+    student_name: f.students.name,
+    class_name: f.students.classes?.class_name || "",
+    section_name: f.students.sections?.section_name || ""
+  }));
 
-/* ---------- ADD SINGLE FEE ---------- */
-app.post("/api/admin/add-fee", async (req, res) => {
-  const { student_id, fee_type, month, amount } = req.body;
-
-  try {
-    await pool.query(
-      `
-      INSERT INTO fees (student_id, fee_type, month, amount)
-      VALUES ($1, $2, $3, $4)
-      `,
-      [student_id, fee_type, month, amount]
-    );
-
-    res.json({ message: "Fee added successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json(result);
 });
 
 /* ---------- UPDATE FEE STATUS ---------- */
 app.post("/api/admin/fee-status", async (req, res) => {
   const { fee_id, status } = req.body;
 
-  try {
-    await pool.query(
-      "UPDATE fees SET status=$1 WHERE id=$2",
-      [status, fee_id]
-    );
+  const { error } = await supabase
+    .from("fees")
+    .update({ status })
+    .eq("id", fee_id);
 
-    res.json({ message: "Fee status updated" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: "Fee status updated" });
 });
 
 /* ---------- BULK MONTHLY FEE ---------- */
 app.post("/api/admin/bulk-fee", async (req, res) => {
   const { class_id, section_id, month, amount } = req.body;
 
-  try {
-    let query = `
-      INSERT INTO fees (student_id, fee_type, month, amount)
-      SELECT auth_id, 'Monthly', $1, $2
-      FROM students
-      WHERE class_id=$3
-    `;
+  /* get students */
+  let studentQuery = supabase
+    .from("students")
+    .select("auth_id")
+    .eq("class_id", class_id);
 
-    let values = [month, amount, class_id];
-
-    if (section_id !== "ALL") {
-      query += " AND section_id=$4";
-      values.push(section_id);
-    }
-
-    await pool.query(query, values);
-
-    res.json({ message: "Bulk fee generated" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (section_id !== "ALL") {
+    studentQuery = studentQuery.eq("section_id", section_id);
   }
+
+  const { data: students, error } = await studentQuery;
+  if (error) return res.status(500).json({ error: error.message });
+
+  const feeRows = (students || []).map(s => ({
+    student_id: s.auth_id,
+    fee_type: "Monthly",
+    month,
+    amount
+  }));
+
+  if (feeRows.length === 0) {
+    return res.json({ message: "No students found" });
+  }
+
+  const { error: insertError } = await supabase
+    .from("fees")
+    .insert(feeRows);
+
+  if (insertError) return res.status(500).json({ error: insertError.message });
+
+  res.json({ message: "Bulk fee generated" });
 });
+
+
+
+
+
+
+
 
 
 
@@ -1441,6 +1410,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
