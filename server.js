@@ -104,24 +104,54 @@ app.post("/get_role", async (req, res) => {
 
 
 // ----------------------- STUDENT PROFILE ----------------------------
-app.get("/get_student_profile", async (req, res) => {
-  try {
-    const { auth_uid } = req.query;
+app.get("/api/student/profile/:auth_id", async (req, res) => {
+  const { auth_id } = req.params;
 
-    const { data, error } = await supabase
-      .from("students")
-      .select("*")
-      .eq("auth_uid", auth_uid)
-      .single();
+  const { data, error } = await supabase
+    .from("students")
+    .select(`
+      auth_id,
+      roll_no,
+      dob,
+      father_name,
+      mother_name,
+      mobile,
+      users (
+        name,
+        email
+      ),
+      classes (
+        class_name
+      ),
+      sections (
+        section_name
+      )
+    `)
+    .eq("auth_id", auth_id)
+    .single();
 
-    if (error) return res.status(404).json({ error: error.message });
-    res.json(data);
+  if (error) return res.status(400).json({ error });
 
-  } catch (e) {
-    res.status(500).json({ error: "Server error" });
-  }
+  res.json(data);
 });
 
+
+
+ //-------------------fee student-------------------------
+
+app.get("/api/student/fees/:auth_id", async (req, res) => {
+  const { auth_id } = req.params;
+
+  const { data, error } = await supabase
+    .from("student_fees")
+    .select("fee_type, fee_name, month, amount, status")
+    .eq("auth_id", auth_id)
+    .order("month", { ascending: true });
+
+  if (error) return res.status(400).json({ error });
+
+  res.json(data);
+});
 
 
 // ----------------------- UPDATE STUDENT PHOTO ----------------------------
@@ -1157,6 +1187,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
