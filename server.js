@@ -175,6 +175,28 @@ app.get("/api/student/fees/:auth_id", async (req, res) => {
 });
 
 
+
+//-------------------result------------
+
+app.get("/api/student/result", async (req, res) => {
+  try {
+    const { student_id, exam_type, class_name } = req.query;
+
+    const { data, error } = await supabase
+      .from("results")
+      .select("*")
+      .eq("student_id", student_id)
+      .eq("exam_type", exam_type)
+      .eq("class_name", class_name);
+
+    if (error) return res.status(500).json({ error });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
 // ----------------------- UPDATE STUDENT PHOTO ----------------------------
 app.post("/update_student_photo", upload.single("image"), async (req, res) => {
     try {
@@ -1208,6 +1230,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
