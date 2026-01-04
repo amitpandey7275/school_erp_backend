@@ -108,42 +108,53 @@ app.get("/api/student/profile/:auth_id", async (req, res) => {
   try {
     const { auth_id } = req.params;
 
-    const { data, error } = await supabase
+    // 1️⃣ STUDENT BASIC DATA
+    const { data: student, error: studentError } = await supabase
       .from("students")
-      .select(`
-        auth_id,
-        roll_no,
-        dob,
-        father_name,
-        mother_name,
-        mobile,
-        address,
-        admission_no,
-        users:auth_id (
-          name,
-          email
-        ),
-        classes:class_id (
-          class_name
-        ),
-        sections:section_id (
-          section_name
-        )
-      `)
+      .select("*")
       .eq("auth_id", auth_id)
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      console.error("PROFILE ERROR:", error);
-      return res.status(500).json({ error: "Profile fetch failed" });
+    if (studentError || !student) {
+      console.error("STUDENT ERROR:", studentError);
+      return res.status(404).json({ error: "Student not found" });
     }
 
-    res.json(data);
+    // 2️⃣ USER DATA
+    const { data: user } = await supabase
+      .from("users")
+      .select("name, email")
+      .eq("auth_id", auth_id)
+      .single();
+
+    // 3️⃣ CLASS
+    const { data: classData } = await supabase
+      .from("classes")
+      .select("class_name")
+      .eq("class_id", student.class_id)
+      .single();
+
+    // 4️⃣ SECTION
+    const { data: sectionData } = await supabase
+      .from("sections")
+      .select("section_name")
+      .eq("section_id", student.section_id)
+      .single();
+
+    // 5️⃣ MERGE RESPONSE
+    res.json({
+      ...student,
+      users: user || {},
+      classes: classData || {},
+      sections: sectionData || {}
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("PROFILE API CRASH:", err);
+    res.status(500).json({ error: "Profile fetch failed" });
   }
 });
+
 
 
 
@@ -1197,6 +1208,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
