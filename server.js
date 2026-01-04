@@ -1287,7 +1287,6 @@ app.get("/api/admin/sections/:class_id", async (req, res) => {
 /* =================================================
    ================= FEES ===========================
    ================================================= */
-
 app.get("/api/admin/fees", async (req, res) => {
   const { class_id, section_id, month, fee_type } = req.query;
 
@@ -1299,13 +1298,13 @@ app.get("/api/admin/fees", async (req, res) => {
       month,
       amount,
       status,
-      students (
+      students:students!inner (
         auth_id,
         class_id,
         section_id,
-        classes ( class_name ),
-        sections ( section_name ),
-        users ( name )
+        users:users!inner ( name ),
+        classes:classes!inner ( class_name ),
+        sections:sections!inner ( section_name )
       )
     `);
 
@@ -1313,14 +1312,21 @@ app.get("/api/admin/fees", async (req, res) => {
   if (fee_type && fee_type !== "ALL") query = query.eq("fee_type", fee_type);
 
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
 
-  const filtered = (data || []).filter(f => {
+  const filtered = data.filter(f => {
     const s = f.students;
-    if (!s) return false;
 
-    if (class_id !== "ALL" && s.class_id !== class_id) return false;
-    if (section_id !== "ALL" && s.section_id !== section_id) return false;
+    if (class_id && class_id !== "ALL" && s.class_id !== Number(class_id)) {
+      return false;
+    }
+
+    if (section_id && section_id !== "ALL" && s.section_id !== Number(section_id)) {
+      return false;
+    }
 
     return true;
   });
@@ -1331,27 +1337,29 @@ app.get("/api/admin/fees", async (req, res) => {
     month: f.month,
     amount: f.amount,
     status: f.status,
-    student_name: f.students?.users?.name || "",
-    class_name: f.students?.classes?.class_name || "",
-    section_name: f.students?.sections?.section_name || ""
+    student_name: f.students.users.name,
+    class_name: f.students.classes.class_name,
+    section_name: f.students.sections.section_name
   }));
 
   res.json(result);
 });
 
 
-/* ---------- UPDATE FEE STATUS ---------- */
+/* ---------- UPDATE FEE STATUS ----------*/
 app.post("/api/admin/fee-status", async (req, res) => {
   const { fee_id, status } = req.body;
 
   const { error } = await supabase
-    .from("fees")
+    .from("student_fees")
     .update({ status })
     .eq("id", fee_id);
 
   if (error) return res.status(500).json({ error: error.message });
+
   res.json({ message: "Fee status updated" });
 });
+
 
 /* ---------- BULK MONTHLY FEE ---------- */
 app.post("/api/admin/bulk-fee", async (req, res) => {
@@ -1402,6 +1410,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
