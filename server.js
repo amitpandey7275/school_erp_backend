@@ -117,6 +117,8 @@ app.get("/api/student/profile/:auth_id", async (req, res) => {
         father_name,
         mother_name,
         mobile,
+        address,
+        admission_no,
         users:auth_id (
           name,
           email
@@ -129,20 +131,14 @@ app.get("/api/student/profile/:auth_id", async (req, res) => {
         )
       `)
       .eq("auth_id", auth_id)
-      .maybeSingle();   // 🔥 VERY IMPORTANT
+      .maybeSingle();
 
     if (error) {
       console.error("PROFILE ERROR:", error);
       return res.status(500).json({ error: "Profile fetch failed" });
     }
 
-    // 👇 student record hi nahi mila
-    if (!data) {
-      return res.json(null);
-    }
-
     res.json(data);
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -1201,6 +1197,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
