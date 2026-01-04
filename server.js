@@ -1288,7 +1288,6 @@ app.get("/api/admin/sections/:class_id", async (req, res) => {
    ================= FEES ===========================
    ================================================= */
 
-/* ---------- GET FEES (FILTERS) ---------- */
 app.get("/api/admin/fees", async (req, res) => {
   const { class_id, section_id, month, fee_type } = req.query;
 
@@ -1301,6 +1300,7 @@ app.get("/api/admin/fees", async (req, res) => {
       amount,
       status,
       students (
+        auth_id,
         name,
         class_id,
         section_id,
@@ -1313,34 +1313,39 @@ app.get("/api/admin/fees", async (req, res) => {
   if (fee_type && fee_type !== "ALL") query = query.eq("fee_type", fee_type);
 
   const { data, error } = await query;
-
   if (error) return res.status(500).json({ error: error.message });
 
-  /* FILTER class / section manually */
   const filtered = (data || []).filter(f => {
     const s = f.students;
     if (!s) return false;
 
-    if (class_id && class_id !== "ALL" && s.class_id !== class_id) return false;
-    if (section_id && section_id !== "ALL" && s.section_id !== section_id) return false;
+    // class filter
+    if (class_id && class_id !== "ALL" && s.class_id !== class_id) {
+      return false;
+    }
+
+    // section filter (student.section_id se)
+    if (section_id && section_id !== "ALL" && s.section_id !== section_id) {
+      return false;
+    }
 
     return true;
   });
 
-  /* FLATTEN RESPONSE (frontend friendly) */
   const result = filtered.map(f => ({
     id: f.id,
     fee_type: f.fee_type,
     month: f.month,
     amount: f.amount,
     status: f.status,
-    student_name: f.students.name,
-    class_name: f.students.classes?.class_name || "",
-    section_name: f.students.sections?.section_name || ""
+    student_name: f.students?.name || "",
+    class_name: f.students?.classes?.class_name || "",
+    section_name: f.students?.sections?.section_name || ""
   }));
 
   res.json(result);
 });
+
 
 /* ---------- UPDATE FEE STATUS ---------- */
 app.post("/api/admin/fee-status", async (req, res) => {
@@ -1359,29 +1364,28 @@ app.post("/api/admin/fee-status", async (req, res) => {
 app.post("/api/admin/bulk-fee", async (req, res) => {
   const { class_id, section_id, month, amount } = req.body;
 
-  /* get students */
   let studentQuery = supabase
     .from("students")
     .select("auth_id")
     .eq("class_id", class_id);
 
-  if (section_id !== "ALL") {
+  if (section_id && section_id !== "ALL") {
     studentQuery = studentQuery.eq("section_id", section_id);
   }
 
   const { data: students, error } = await studentQuery;
   if (error) return res.status(500).json({ error: error.message });
 
-  const feeRows = (students || []).map(s => ({
+  if (!students || students.length === 0) {
+    return res.json({ message: "No students found" });
+  }
+
+  const feeRows = students.map(s => ({
     student_id: s.auth_id,
     fee_type: "Monthly",
     month,
     amount
   }));
-
-  if (feeRows.length === 0) {
-    return res.json({ message: "No students found" });
-  }
 
   const { error: insertError } = await supabase
     .from("fees")
@@ -1391,15 +1395,6 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
 
   res.json({ message: "Bulk fee generated" });
 });
-
-
-
-
-
-
-
-
-
 
 // =========================================================================
 //                         ADMIN PROFILE
@@ -1412,6 +1407,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
