@@ -1292,7 +1292,7 @@ app.get("/api/admin/fees", async (req, res) => {
   const { class_id, section_id, month, fee_type } = req.query;
 
   let query = supabase
-    .from("fees")
+    .from("student_fees")
     .select(`
       id,
       fee_type,
@@ -1301,11 +1301,11 @@ app.get("/api/admin/fees", async (req, res) => {
       status,
       students (
         auth_id,
-        name,
         class_id,
         section_id,
         classes ( class_name ),
-        sections ( section_name )
+        sections ( section_name ),
+        users ( name )
       )
     `);
 
@@ -1319,15 +1319,8 @@ app.get("/api/admin/fees", async (req, res) => {
     const s = f.students;
     if (!s) return false;
 
-    // class filter
-    if (class_id && class_id !== "ALL" && s.class_id !== class_id) {
-      return false;
-    }
-
-    // section filter (student.section_id se)
-    if (section_id && section_id !== "ALL" && s.section_id !== section_id) {
-      return false;
-    }
+    if (class_id !== "ALL" && s.class_id !== class_id) return false;
+    if (section_id !== "ALL" && s.section_id !== section_id) return false;
 
     return true;
   });
@@ -1338,7 +1331,7 @@ app.get("/api/admin/fees", async (req, res) => {
     month: f.month,
     amount: f.amount,
     status: f.status,
-    student_name: f.students?.name || "",
+    student_name: f.students?.users?.name || "",
     class_name: f.students?.classes?.class_name || "",
     section_name: f.students?.sections?.section_name || ""
   }));
@@ -1376,25 +1369,27 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
   const { data: students, error } = await studentQuery;
   if (error) return res.status(500).json({ error: error.message });
 
-  if (!students || students.length === 0) {
+  if (!students?.length) {
     return res.json({ message: "No students found" });
   }
 
   const feeRows = students.map(s => ({
-    student_id: s.auth_id,
+    auth_id: s.auth_id,
     fee_type: "Monthly",
     month,
-    amount
+    amount,
+    status: "DUE"
   }));
 
   const { error: insertError } = await supabase
-    .from("fees")
+    .from("student_fees")
     .insert(feeRows);
 
   if (insertError) return res.status(500).json({ error: insertError.message });
 
   res.json({ message: "Bulk fee generated" });
 });
+
 
 // =========================================================================
 //                         ADMIN PROFILE
@@ -1407,6 +1402,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
