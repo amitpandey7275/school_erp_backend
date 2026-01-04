@@ -105,34 +105,48 @@ app.post("/get_role", async (req, res) => {
 
 // ----------------------- STUDENT PROFILE ----------------------------
 app.get("/api/student/profile/:auth_id", async (req, res) => {
-  const { auth_id } = req.params;
+  try {
+    const { auth_id } = req.params;
 
-  const { data, error } = await supabase
-    .from("students")
-    .select(`
-      auth_id,
-      roll_no,
-      dob,
-      father_name,
-      mother_name,
-      mobile,
-      users:auth_id (
-        name,
-        email
-      ),
-      classes:class_id (
-        class_name
-      ),
-      sections:section_id (
-        section_name
-      )
-    `)
-    .eq("auth_id", auth_id)
-    .single();
+    const { data, error } = await supabase
+      .from("students")
+      .select(`
+        auth_id,
+        roll_no,
+        dob,
+        father_name,
+        mother_name,
+        mobile,
+        users:auth_id (
+          name,
+          email
+        ),
+        classes:class_id (
+          class_name
+        ),
+        sections:section_id (
+          section_name
+        )
+      `)
+      .eq("auth_id", auth_id)
+      .maybeSingle();   // 🔥 VERY IMPORTANT
 
-  if (error) return res.status(400).json({ error });
+    if (error) {
+      console.error("PROFILE ERROR:", error);
+      return res.status(500).json({ error: "Profile fetch failed" });
+    }
 
-  res.json(data);
+    // 👇 student record hi nahi mila
+    if (!data) {
+      return res.json(null);
+    }
+
+    res.json(data);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 
@@ -1187,6 +1201,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
