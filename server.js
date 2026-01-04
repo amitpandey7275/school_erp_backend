@@ -1150,28 +1150,73 @@ app.get("/getStudents", async (req, res) => {
   }
 });
 
-// =========================================================================
-//                         TEACHER ATTENDANCE
-// =========================================================================
+// ===============================Student Attendance==========================================
+app.get("/api/student/attendance-summary", async (req, res) => {
+  try {
+    const { student_id } = req.query;
 
-app.get("/getTeacherAttendanceCalendar", async (req, res) => {
-    try {
-        const { uid } = req.query;
+    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
 
-        if (!uid) return res.status(400).json({ error: "UID required" });
+    const monthStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    ).toISOString().split("T")[0];
 
-        const { data, error } = await supabase
-            .from("teacher_attendance")
-            .select("*")
-            .eq("teacher_uid", uid);
+    const aprilStart =
+      now.getMonth() + 1 >= 4
+        ? `${now.getFullYear()}-04-01`
+        : `${now.getFullYear() - 1}-04-01`;
 
-        if (error) return res.status(500).json({ error: error.message });
+    // 🔹 Today
+    const { data: todayData } = await supabase
+      .from("student_attendance")
+      .select("status")
+      .eq("student_id", student_id)
+      .eq("date", today)
+      .single();
 
-        res.json(data);
+    // 🔹 This Month
+    const { data: monthData } = await supabase
+      .from("student_attendance")
+      .select("status")
+      .eq("student_id", student_id)
+      .gte("date", monthStart);
 
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
+    // 🔹 April → Now
+    const { data: yearData } = await supabase
+      .from("student_attendance")
+      .select("status")
+      .eq("student_id", student_id)
+      .gte("date", aprilStart);
+
+    const count = (arr, s) =>
+      (arr || []).filter(a => a.status === s).length;
+
+    const monthPresent = count(monthData, "present");
+    const monthAbsent  = count(monthData, "absent");
+
+    const yearPresent  = count(yearData, "present");
+    const yearAbsent   = count(yearData, "absent");
+
+    res.json({
+      todayStatus: todayData?.status || "not_marked",
+      month: {
+        present: monthPresent,
+        absent: monthAbsent,
+        total: monthPresent + monthAbsent
+      },
+      year: {
+        present: yearPresent,
+        absent: yearAbsent,
+        total: yearPresent + yearAbsent
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // ----------------------- MARK TEACHER ATTENDANCE (ADMIN) ----------------------------
@@ -1230,6 +1275,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
