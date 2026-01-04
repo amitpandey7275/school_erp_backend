@@ -1269,18 +1269,20 @@ app.get("/api/admin/classes", async (req, res) => {
   res.json(data || []);
 });
 
-/* ---------- GET SECTIONS BY CLASS ---------- */
+/* ---------- GET SECTIONS (CLASS INDEPENDENT) ---------- */
 app.get("/api/admin/sections/:class_id", async (req, res) => {
-  const { class_id } = req.params;
-
   const { data, error } = await supabase
     .from("sections")
     .select("section_id, section_name")
-    .eq("class_id", class_id);
+    .order("section_name");
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
   res.json(data || []);
 });
+
 
 /* =================================================
    ================= FEES ===========================
@@ -1410,6 +1412,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
