@@ -1262,6 +1262,166 @@ app.post("/markTeacherAttendance", async (req, res) => {
 });
 
 
+
+
+
+
+
+
+
+
+/* ---------- GET ALL CLASSES ---------- */
+app.get("/api/admin/classes", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT class_id, class_name FROM classes ORDER BY class_name"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ---------- GET SECTIONS BY CLASS ---------- */
+app.get("/api/admin/sections/:class_id", async (req, res) => {
+  const { class_id } = req.params;
+  try {
+    const result = await pool.query(
+      "SELECT section_id, section_name FROM sections WHERE class_id=$1",
+      [class_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =================================================
+   ================= FEES ===========================
+   ================================================= */
+
+/* ---------- GET FEES (FILTERS) ---------- */
+app.get("/api/admin/fees", async (req, res) => {
+  const { class_id, section_id, month, fee_type } = req.query;
+
+  let conditions = [];
+  let values = [];
+
+  if (class_id && class_id !== "ALL") {
+    values.push(class_id);
+    conditions.push(`s.class_id = $${values.length}`);
+  }
+
+  if (section_id && section_id !== "ALL") {
+    values.push(section_id);
+    conditions.push(`s.section_id = $${values.length}`);
+  }
+
+  if (month && month !== "ALL") {
+    values.push(month);
+    conditions.push(`f.month = $${values.length}`);
+  }
+
+  if (fee_type && fee_type !== "ALL") {
+    values.push(fee_type);
+    conditions.push(`f.fee_type = $${values.length}`);
+  }
+
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        f.id,
+        f.fee_type,
+        f.month,
+        f.amount,
+        f.status,
+        s.name AS student_name,
+        c.class_name,
+        sec.section_name
+      FROM fees f
+      JOIN students s ON f.student_id = s.auth_id
+      JOIN classes c ON s.class_id = c.class_id
+      JOIN sections sec ON s.section_id = sec.section_id
+      ${where}
+      ORDER BY s.name
+      `,
+      values
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ---------- ADD SINGLE FEE ---------- */
+app.post("/api/admin/add-fee", async (req, res) => {
+  const { student_id, fee_type, month, amount } = req.body;
+
+  try {
+    await pool.query(
+      `
+      INSERT INTO fees (student_id, fee_type, month, amount)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [student_id, fee_type, month, amount]
+    );
+
+    res.json({ message: "Fee added successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ---------- UPDATE FEE STATUS ---------- */
+app.post("/api/admin/fee-status", async (req, res) => {
+  const { fee_id, status } = req.body;
+
+  try {
+    await pool.query(
+      "UPDATE fees SET status=$1 WHERE id=$2",
+      [status, fee_id]
+    );
+
+    res.json({ message: "Fee status updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ---------- BULK MONTHLY FEE ---------- */
+app.post("/api/admin/bulk-fee", async (req, res) => {
+  const { class_id, section_id, month, amount } = req.body;
+
+  try {
+    let query = `
+      INSERT INTO fees (student_id, fee_type, month, amount)
+      SELECT auth_id, 'Monthly', $1, $2
+      FROM students
+      WHERE class_id=$3
+    `;
+
+    let values = [month, amount, class_id];
+
+    if (section_id !== "ALL") {
+      query += " AND section_id=$4";
+      values.push(section_id);
+    }
+
+    await pool.query(query, values);
+
+    res.json({ message: "Bulk fee generated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 // =========================================================================
 //                         ADMIN PROFILE
 
@@ -1273,6 +1433,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
