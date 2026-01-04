@@ -116,14 +116,14 @@ app.get("/api/student/profile/:auth_id", async (req, res) => {
       father_name,
       mother_name,
       mobile,
-      users (
+      users:auth_id (
         name,
         email
       ),
-      classes (
+      classes:class_id (
         class_name
       ),
-      sections (
+      sections:section_id (
         section_name
       )
     `)
@@ -1187,6 +1187,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
