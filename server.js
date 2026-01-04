@@ -15,6 +15,14 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 
+const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+
 
 
 // ----------------------- SUPABASE CONNECTION ----------------------------
@@ -1433,6 +1441,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
