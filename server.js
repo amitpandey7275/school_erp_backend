@@ -318,41 +318,6 @@ app.post(
         }
     }
 );
-// ----------------------- TEACHER PROFILE ----------------------------
-app.get("/getTeacherProfile", async (req, res) => {
-    try {
-        const uid = req.query.uid;
-
-        if (!uid) {
-            return res.status(400).json({ message: "UID required" });
-        }
-
-        const { data, error } = await supabase
-            .from("teachers")
-            .select(`
-                id,
-                uid,
-                name,
-                email,
-                phone,
-                qualification,
-                subject,
-                experience,
-                profile_image_url
-            `)
-            .eq("uid", uid)
-            .single();
-
-        if (error || !data) {
-            return res.status(404).json({ message: "Teacher not found" });
-        }
-
-        res.json(data);
-
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
 // ----------------------- UPLOAD NOTICE ----------------------------
 app.post("/upload_notice", async (req, res) => {
@@ -783,22 +748,69 @@ app.post("/admin_delete_gallery", async (req, res) => {
 });
 
 
-// ----------------------- GET ALL TEACHERS list Admin ----------------------------
-app.get("/get_teachers", async (req, res) => {
+// ----------------------- TEACHER PROFILE ----------------------------
+app.get("/getTeacherProfile", async (req, res) => {
     try {
+        const uid = req.query.uid;
+
+        if (!uid) {
+            return res.status(400).json({ message: "UID required" });
+        }
+
         const { data, error } = await supabase
             .from("teachers")
-            .select("*")
-            .order("id", { ascending: true });
+            .select(`
+                id,
+                uid,
+                name,
+                email,
+                phone,
+                qualification,
+                subject,
+                experience,
+                profile_image_url
+            `)
+            .eq("uid", uid)
+            .single();
 
-        if (error) return res.status(500).json({ error: error.message });
+        if (error || !data) {
+            return res.status(404).json({ message: "Teacher not found" });
+        }
 
         res.json(data);
 
     } catch (err) {
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ message: err.message });
     }
 });
+
+
+// ----------------------- GET ALL TEACHERS (Admin) ----------------------------
+app.get("/get_teachers", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("teachers")
+      .select(`
+        id,
+        subject,
+        phone,
+        users (
+          name,
+          email
+        )
+      `)
+      .order("id", { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 //                         Teacher UPLOAD HOMEWORK 
 // =========================================================================
@@ -1480,6 +1492,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
