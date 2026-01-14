@@ -1270,23 +1270,20 @@ app.get("/getClasses", async (req, res) => {
 });
 app.get("/getSections", async (req, res) => {
   try {
-    const { class_id } = req.query;
-    if (!class_id) return res.json([]);
-
+    // class_id ignore hoga kyunki DB me nahi hai
     const { data, error } = await supabase
       .from("sections")
-      .select("section_id, section_name, class_id")
-      .eq("class_id", class_id)
+      .select("section_id, section_name")
       .order("section_name");
 
     if (error) throw error;
 
+    // ALWAYS array
     res.json(data || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json([]);
   }
 });
-
 
 // ----------------------- MARK TEACHER ATTENDANCE (ADMIN) ----------------------------
 app.post("/markTeacherAttendance", async (req, res) => {
@@ -1484,6 +1481,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
