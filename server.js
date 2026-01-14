@@ -787,18 +787,16 @@ app.get("/getTeacherProfile", async (req, res) => {
 
 
 // ----------------------- GET ALL TEACHERS (Admin) ----------------------------
+// ----------------------- GET ALL TEACHERS (Admin) ----------------------------
 app.get("/get_teachers", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("teachers")
       .select(`
         id,
-        subject,
+        full_name,
         phone,
-        users (
-          name,
-          email
-        )
+        subject
       `)
       .order("id", { ascending: true });
 
@@ -1493,6 +1491,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
