@@ -1119,7 +1119,40 @@ app.delete("/deleteTeacherNotes/:id", async (req, res) => {
     res.json({ success: true });
 });
 
-//........................GET STUDENTS............
+
+// ================= TEACHER : STUDENTS LIST =================
+app.get("/api/teacher/students", async (req, res) => {
+  try {
+    const { class_id, section_id } = req.query;
+
+    if (!class_id || !section_id) {
+      return res.json([]);
+    }
+
+    const { data, error } = await supabase
+      .from("students")
+      .select(`
+        auth_id,
+        roll_no,
+        father_name,
+        users (
+          name
+        )
+      `)
+      .eq("class_id", class_id)
+      .eq("section_id", section_id)
+      .order("roll_no");
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
+});
+
+//........................GET STUDENTS Attendance............
 app.get("/getStudents", async (req, res) => {
   try {
     const { class_id, section_id } = req.query;
@@ -1447,6 +1480,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
