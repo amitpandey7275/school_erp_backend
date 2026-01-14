@@ -1120,7 +1120,7 @@ app.delete("/deleteTeacherNotes/:id", async (req, res) => {
 });
 
 //                         GET STUDENTS
-// =========================================================================
+
 app.get("/getStudents", async (req, res) => {
   try {
     const { class_id, section_id } = req.query;
@@ -1128,44 +1128,28 @@ app.get("/getStudents", async (req, res) => {
     let query = supabase
       .from("students")
       .select(`
-        id,
+        student_id,
         roll_no,
         class_id,
         section_id,
-        users (
-          name
-        )
+        users ( name )
       `)
-      .order("roll_no", { ascending: true });
+      .order("roll_no");
 
-    if (class_id) {
-      query = query.eq("class_id", class_id); // UUID
-    }
-
-    if (section_id) {
-      query = query.eq("section_id", section_id); // UUID
-    }
+    if (class_id) query = query.eq("class_id", class_id);
+    if (section_id) query = query.eq("section_id", section_id);
 
     const { data, error } = await query;
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
     res.json(data || []);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: err.message });
   }
 });
-
-
-
-// ===============================Student Attendance==========================================
-// ================= TEACHER : SAVE / UPDATE ATTENDANCE =================
 app.post("/api/teacher/attendance", async (req, res) => {
   try {
     const { class_id, section_id, date, attendance } = req.body;
-    // attendance = [{ student_id, status }]
 
     if (!class_id || !section_id || !date || !attendance?.length) {
       return res.status(400).json({ message: "Missing fields" });
@@ -1188,14 +1172,10 @@ app.post("/api/teacher/attendance", async (req, res) => {
     if (error) throw error;
 
     res.json({ success: true });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-// ================= STUDENT : ATTENDANCE SUMMARY =================
 app.get("/api/student/attendance-summary", async (req, res) => {
   try {
     const { student_id } = req.query;
@@ -1246,24 +1226,17 @@ app.get("/api/student/attendance-summary", async (req, res) => {
         absent: count(yearData, "absent")
       }
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-// ================= STUDENT : ATTENDANCE CALENDAR =================
 app.get("/api/student/attendance-calendar", async (req, res) => {
   try {
     const { student_id, year, month } = req.query;
-
-    if (!student_id || !year || !month) {
-      return res.json([]);
-    }
+    if (!student_id || !year || !month) return res.json([]);
 
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
-    const end   = `${year}-${String(month).padStart(2, "0")}-31`;
+    const end = `${year}-${String(month).padStart(2, "0")}-31`;
 
     const { data, error } = await supabase
       .from("student_attendance")
@@ -1276,11 +1249,44 @@ app.get("/api/student/attendance-calendar", async (req, res) => {
     if (error) throw error;
 
     res.json(data || []);
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.get("/getClasses", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("classes")
+      .select("class_id, class_name")
+      .order("class_name");
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/getSections", async (req, res) => {
+  try {
+    const { class_id } = req.query;
+    if (!class_id) return res.json([]);
+
+    const { data, error } = await supabase
+      .from("sections")
+      .select("section_id, section_name, class_id")
+      .eq("class_id", class_id)
+      .order("section_name");
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ----------------------- MARK TEACHER ATTENDANCE (ADMIN) ----------------------------
 app.post("/markTeacherAttendance", async (req, res) => {
@@ -1478,6 +1484,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
