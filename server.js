@@ -1124,28 +1124,36 @@ app.delete("/deleteTeacherNotes/:id", async (req, res) => {
 
 app.get("/getStudents", async (req, res) => {
   try {
-    const { class_name, section } = req.query;
+    const { class_id, section_id } = req.query;
 
     let query = supabase
       .from("students")
       .select("*")
-      .order("class_name", { ascending: true })
-      .order("section", { ascending: true })
+      .order("class_id", { ascending: true })
+      .order("section_id", { ascending: true })
       .order("roll_no", { ascending: true });
 
-    if (class_name) query = query.eq("class_name", class_name);
-    if (section) query = query.eq("section", section);
+    if (class_id) {
+      query = query.eq("class_id", Number(class_id));
+    }
+
+    if (section_id) {
+      query = query.eq("section_id", Number(section_id));
+    }
 
     const { data, error } = await query;
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data);
+    res.json(data || []);
 
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 // ===============================Student Attendance==========================================
 // ================= TEACHER : SAVE / UPDATE ATTENDANCE =================
@@ -1465,6 +1473,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
