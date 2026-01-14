@@ -1119,8 +1119,7 @@ app.delete("/deleteTeacherNotes/:id", async (req, res) => {
     res.json({ success: true });
 });
 
-//                         GET STUDENTS
-
+//........................GET STUDENTS............
 app.get("/getStudents", async (req, res) => {
   try {
     const { class_id, section_id } = req.query;
@@ -1128,7 +1127,7 @@ app.get("/getStudents", async (req, res) => {
     let query = supabase
       .from("students")
       .select(`
-        student_id,
+        auth_id,
         roll_no,
         class_id,
         section_id,
@@ -1144,9 +1143,11 @@ app.get("/getStudents", async (req, res) => {
 
     res.json(data || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json([]);
   }
 });
+
+//.....................
 app.post("/api/teacher/attendance", async (req, res) => {
   try {
     const { class_id, section_id, date, attendance } = req.body;
@@ -1156,7 +1157,7 @@ app.post("/api/teacher/attendance", async (req, res) => {
     }
 
     const records = attendance.map(a => ({
-      student_id: a.student_id,
+      auth_id: a.auth_id,   // 🔥 auth_id use
       class_id,
       section_id,
       date,
@@ -1166,7 +1167,7 @@ app.post("/api/teacher/attendance", async (req, res) => {
     const { error } = await supabase
       .from("student_attendance")
       .upsert(records, {
-        onConflict: "student_id,date"
+        onConflict: "auth_id,date"
       });
 
     if (error) throw error;
@@ -1178,79 +1179,44 @@ app.post("/api/teacher/attendance", async (req, res) => {
 });
 app.get("/api/student/attendance-summary", async (req, res) => {
   try {
-    const { student_id } = req.query;
-    if (!student_id) return res.json({});
+    const { auth_id } = req.query;
+    if (!auth_id) return res.json({});
 
     const today = new Date().toISOString().split("T")[0];
-    const now = new Date();
 
-    const monthStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    ).toISOString().split("T")[0];
-
-    const yearStart =
-      now.getMonth() + 1 >= 4
-        ? `${now.getFullYear()}-04-01`
-        : `${now.getFullYear() - 1}-04-01`;
-
-    const todayData = await supabase
+    const { data } = await supabase
       .from("student_attendance")
       .select("status")
-      .eq("student_id", student_id)
+      .eq("auth_id", auth_id)
       .eq("date", today)
       .maybeSingle();
 
-    const fetchData = async (fromDate) =>
-      supabase
-        .from("student_attendance")
-        .select("status")
-        .eq("student_id", student_id)
-        .gte("date", fromDate);
-
-    const monthData = await fetchData(monthStart);
-    const yearData = await fetchData(yearStart);
-
-    const count = (arr, s) =>
-      (arr?.data || []).filter(x => x.status === s).length;
-
     res.json({
-      today: todayData.data?.status || "not_marked",
-      month: {
-        present: count(monthData, "present"),
-        absent: count(monthData, "absent")
-      },
-      year: {
-        present: count(yearData, "present"),
-        absent: count(yearData, "absent")
-      }
+      today: data?.status || "not_marked"
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch {
+    res.json({});
   }
 });
 app.get("/api/student/attendance-calendar", async (req, res) => {
   try {
-    const { student_id, year, month } = req.query;
-    if (!student_id || !year || !month) return res.json([]);
+    const { auth_id, year, month } = req.query;
+    if (!auth_id) return res.json([]);
 
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
-    const end = `${year}-${String(month).padStart(2, "0")}-31`;
+    const end   = `${year}-${String(month).padStart(2, "0")}-31`;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("student_attendance")
       .select("date, status")
-      .eq("student_id", student_id)
+      .eq("auth_id", auth_id)
       .gte("date", start)
       .lte("date", end)
       .order("date");
 
-    if (error) throw error;
-
     res.json(data || []);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch {
+    res.json([]);
   }
 });
 
@@ -1481,6 +1447,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
