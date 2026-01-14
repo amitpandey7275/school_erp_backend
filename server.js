@@ -1121,24 +1121,29 @@ app.delete("/deleteTeacherNotes/:id", async (req, res) => {
 
 //                         GET STUDENTS
 // =========================================================================
-
 app.get("/getStudents", async (req, res) => {
   try {
     const { class_id, section_id } = req.query;
 
     let query = supabase
       .from("students")
-      .select("*")
-      .order("class_id", { ascending: true })
-      .order("section_id", { ascending: true })
+      .select(`
+        id,
+        roll_no,
+        class_id,
+        section_id,
+        users (
+          name
+        )
+      `)
       .order("roll_no", { ascending: true });
 
     if (class_id) {
-      query = query.eq("class_id", Number(class_id));
+      query = query.eq("class_id", class_id); // UUID
     }
 
     if (section_id) {
-      query = query.eq("section_id", Number(section_id));
+      query = query.eq("section_id", section_id); // UUID
     }
 
     const { data, error } = await query;
@@ -1148,11 +1153,11 @@ app.get("/getStudents", async (req, res) => {
     }
 
     res.json(data || []);
-
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 
 // ===============================Student Attendance==========================================
@@ -1473,6 +1478,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
