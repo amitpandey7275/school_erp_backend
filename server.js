@@ -1148,70 +1148,125 @@ app.get("/getStudents", async (req, res) => {
 });
 
 // ===============================Student Attendance==========================================
-app.get("/api/student/attendance-summary", async (req, res) => {
-  const { student_id } = req.query;
+// ================= TEACHER : SAVE / UPDATE ATTENDANCE =================
+app.post("/api/teacher/attendance", async (req, res) => {
+  try {
+    const { class_id, section_id, date, attendance } = req.body;
+    // attendance = [{ student_id, status }]
 
-  const today = new Date().toISOString().split("T")[0];
-  const now = new Date();
-
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString().split("T")[0];
-
-  const aprilStart =
-    now.getMonth() + 1 >= 4
-      ? `${now.getFullYear()}-04-01`
-      : `${now.getFullYear() - 1}-04-01`;
-
-  const todayData = await supabase
-    .from("student_attendance")
-    .select("status")
-    .eq("student_id", student_id)
-    .eq("date", today)
-    .single();
-
-  const monthData = await supabase
-    .from("student_attendance")
-    .select("status")
-    .eq("student_id", student_id)
-    .gte("date", monthStart);
-
-  const yearData = await supabase
-    .from("student_attendance")
-    .select("status")
-    .eq("student_id", student_id)
-    .gte("date", aprilStart);
-
-  const count = (arr, s) => (arr || []).filter(x => x.status === s).length;
-
-  res.json({
-    today: todayData.data?.status || "not_marked",
-    month: {
-      present: count(monthData.data, "present"),
-      absent: count(monthData.data, "absent")
-    },
-    year: {
-      present: count(yearData.data, "present"),
-      absent: count(yearData.data, "absent")
+    if (!class_id || !section_id || !date || !attendance?.length) {
+      return res.status(400).json({ message: "Missing fields" });
     }
-  });
+
+    const records = attendance.map(a => ({
+      student_id: a.student_id,
+      class_id,
+      section_id,
+      date,
+      status: a.status
+    }));
+
+    const { error } = await supabase
+      .from("student_attendance")
+      .upsert(records, {
+        onConflict: "student_id,date"
+      });
+
+    if (error) throw error;
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
+// ================= STUDENT : ATTENDANCE SUMMARY =================
+app.get("/api/student/attendance-summary", async (req, res) => {
+  try {
+    const { student_id } = req.query;
+    if (!student_id) return res.json({});
+
+    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+
+    const monthStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    ).toISOString().split("T")[0];
+
+    const yearStart =
+      now.getMonth() + 1 >= 4
+        ? `${now.getFullYear()}-04-01`
+        : `${now.getFullYear() - 1}-04-01`;
+
+    const todayData = await supabase
+      .from("student_attendance")
+      .select("status")
+      .eq("student_id", student_id)
+      .eq("date", today)
+      .maybeSingle();
+
+    const fetchData = async (fromDate) =>
+      supabase
+        .from("student_attendance")
+        .select("status")
+        .eq("student_id", student_id)
+        .gte("date", fromDate);
+
+    const monthData = await fetchData(monthStart);
+    const yearData = await fetchData(yearStart);
+
+    const count = (arr, s) =>
+      (arr?.data || []).filter(x => x.status === s).length;
+
+    res.json({
+      today: todayData.data?.status || "not_marked",
+      month: {
+        present: count(monthData, "present"),
+        absent: count(monthData, "absent")
+      },
+      year: {
+        present: count(yearData, "present"),
+        absent: count(yearData, "absent")
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ================= STUDENT : ATTENDANCE CALENDAR =================
 app.get("/api/student/attendance-calendar", async (req, res) => {
-  const { student_id, year, month } = req.query;
+  try {
+    const { student_id, year, month } = req.query;
 
-  const start = `${year}-${String(month).padStart(2,"0")}-01`;
-  const end   = `${year}-${String(month).padStart(2,"0")}-31`;
+    if (!student_id || !year || !month) {
+      return res.json([]);
+    }
 
-  const { data, error } = await supabase
-    .from("student_attendance")
-    .select("date, status")
-    .eq("student_id", student_id)
-    .gte("date", start)
-    .lte("date", end);
+    const start = `${year}-${String(month).padStart(2, "0")}-01`;
+    const end   = `${year}-${String(month).padStart(2, "0")}-31`;
 
-  if (error) return res.status(500).json({ error });
-  res.json(data || []);
+    const { data, error } = await supabase
+      .from("student_attendance")
+      .select("date, status")
+      .eq("student_id", student_id)
+      .gte("date", start)
+      .lte("date", end)
+      .order("date");
+
+    if (error) throw error;
+
+    res.json(data || []);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ----------------------- MARK TEACHER ATTENDANCE (ADMIN) ----------------------------
@@ -1410,6 +1465,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
