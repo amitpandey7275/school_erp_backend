@@ -1532,7 +1532,7 @@ app.get("/subjects", async (req, res) => {
   res.json(data.map(d => d.subjects));
 });
 
-
+///////////////////////
 app.get("/chapters", async (req, res) => {
   const { auth_id, subject_id } = req.query;
 
@@ -1540,7 +1540,6 @@ app.get("/chapters", async (req, res) => {
     return res.status(400).json({ message: "auth_id & subject_id required" });
   }
 
-  // 🔹 student ki class nikalo
   const { data: student, error: studentError } = await supabase
     .from("students")
     .select("class_id")
@@ -1551,7 +1550,6 @@ app.get("/chapters", async (req, res) => {
     return res.status(404).json({ message: "Student not found" });
   }
 
-  // 🔹 sirf usi class ke chapters
   const { data, error } = await supabase
     .from("chapters")
     .select("*")
@@ -1614,6 +1612,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
