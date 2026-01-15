@@ -1479,37 +1479,59 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
   res.json({ message: "Bulk fee generated" });
 });
 
+//.................notes.................................
+router.get("/student/subjects", async (req, res) => {
+  const studentId = req.user.id;
 
-
-app.get("/student/subjects", async (req, res) => {
-  const { class_id } = req.query;
+  const { data: student } = await supabase
+    .from("students")
+    .select("class_id")
+    .eq("user_id", studentId)
+    .single();
 
   const { data, error } = await supabase
-    .from("class_subjects")
-    .select("subjects(subject_id, subject_name)")
-    .eq("class_id", class_id);
+    .from("class_subject")
+    .select("subjects(*)")
+    .eq("class_id", student.class_id);
 
   if (error) return res.status(500).json(error);
 
   res.json(data.map(d => d.subjects));
 });
 
-/* ================= CHAPTERS + NOTES ================= */
-app.get("/student/chapters-with-notes", async (req, res) => {
-  const { class_id, subject_id } = req.query;
 
-  const { data, error } = await supabase.rpc(
-    "get_chapters_with_notes",
-    {
-      p_class_id: class_id,
-      p_subject_id: subject_id
-    }
-  );
+router.get("/student/chapters", async (req, res) => {
+  const { subject_id } = req.query;
+  const studentId = req.user.id;
+
+  const { data: student } = await supabase
+    .from("students")
+    .select("class_id")
+    .eq("user_id", studentId)
+    .single();
+
+  const { data, error } = await supabase
+    .from("chapters")
+    .select("*")
+    .eq("class_id", student.class_id)
+    .eq("subject_id", subject_id);
 
   if (error) return res.status(500).json(error);
-
   res.json(data);
 });
+
+router.get("/student/notes", async (req, res) => {
+  const { chapter_id } = req.query;
+
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("chapter_id", chapter_id);
+
+  if (error) return res.status(500).json(error);
+  res.json(data);
+});
+
 
 // =========================================================================
 //                         ADMIN PROFILE
@@ -1522,6 +1544,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
