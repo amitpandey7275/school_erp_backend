@@ -1485,18 +1485,17 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
 
 //////////////////////////////////////////
 
-
 app.get("/student/class", async (req, res) => {
-  const { user_id } = req.query;
+  const { auth_id } = req.query;
 
-  if (!user_id) {
-    return res.status(400).json({ message: "user_id required" });
+  if (!auth_id) {
+    return res.status(400).json({ message: "auth_id required" });
   }
 
   const { data, error } = await supabase
     .from("students")
     .select("class_id")
-    .eq("user_id", user_id)
+    .eq("auth_id", auth_id)
     .single();
 
   if (error || !data) {
@@ -1506,19 +1505,17 @@ app.get("/student/class", async (req, res) => {
   res.json({ class_id: data.class_id });
 });
 
-
 app.get("/subjects", async (req, res) => {
-  const { user_id } = req.query;
+  const { auth_id } = req.query;
 
-  if (!user_id) {
-    return res.status(400).json({ message: "user_id required" });
+  if (!auth_id) {
+    return res.status(400).json({ message: "auth_id required" });
   }
 
-  // 🔥 student ki class nikalo
   const { data: student, error: studentError } = await supabase
     .from("students")
     .select("class_id")
-    .eq("user_id", user_id)
+    .eq("auth_id", auth_id)
     .single();
 
   if (studentError || !student) {
@@ -1535,17 +1532,18 @@ app.get("/subjects", async (req, res) => {
   res.json(data.map(d => d.subjects));
 });
 
-app.get("/chapters", async (req, res) => {
-  const { user_id, subject_id } = req.query;
 
-  if (!user_id || !subject_id) {
-    return res.status(400).json({ message: "user_id & subject_id required" });
+app.get("/chapters", async (req, res) => {
+  const { auth_id, subject_id } = req.query;
+
+  if (!auth_id || !subject_id) {
+    return res.status(400).json({ message: "auth_id & subject_id required" });
   }
 
   const { data: student, error: studentError } = await supabase
     .from("students")
     .select("class_id")
-    .eq("user_id", user_id)
+    .eq("auth_id", auth_id)
     .single();
 
   if (studentError || !student) {
@@ -1613,6 +1611,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
