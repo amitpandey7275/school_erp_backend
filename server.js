@@ -1484,22 +1484,51 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
 
 
 //////////////////////////////////////////
-app.get("/classes", async (req, res) => {
-  const { data, error } = await supabase
-    .from("classes")
-    .select("*");
 
-  if (error) return res.status(500).json(error);
-  res.json(data);
+
+app.get("/student/class", async (req, res) => {
+  const { user_id } = req.query;
+
+  if (!user_id) {
+    return res.status(400).json({ message: "user_id required" });
+  }
+
+  const { data, error } = await supabase
+    .from("students")
+    .select("class_id")
+    .eq("user_id", user_id)
+    .single();
+
+  if (error || !data) {
+    return res.status(404).json({ message: "Student not found" });
+  }
+
+  res.json({ class_id: data.class_id });
 });
 
+
 app.get("/subjects", async (req, res) => {
-  const { class_id } = req.query;
+  const { user_id } = req.query;
+
+  if (!user_id) {
+    return res.status(400).json({ message: "user_id required" });
+  }
+
+  // 🔥 student ki class nikalo
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("class_id")
+    .eq("user_id", user_id)
+    .single();
+
+  if (studentError || !student) {
+    return res.status(404).json({ message: "Student not found" });
+  }
 
   const { data, error } = await supabase
-    .from("class_subjects")   // ✅ FIXED
+    .from("class_subjects")
     .select("subjects(*)")
-    .eq("class_id", class_id);
+    .eq("class_id", student.class_id);
 
   if (error) return res.status(500).json(error);
 
@@ -1507,17 +1536,33 @@ app.get("/subjects", async (req, res) => {
 });
 
 app.get("/chapters", async (req, res) => {
-  const { class_id, subject_id } = req.query;
+  const { user_id, subject_id } = req.query;
+
+  if (!user_id || !subject_id) {
+    return res.status(400).json({ message: "user_id & subject_id required" });
+  }
+
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("class_id")
+    .eq("user_id", user_id)
+    .single();
+
+  if (studentError || !student) {
+    return res.status(404).json({ message: "Student not found" });
+  }
 
   const { data, error } = await supabase
     .from("chapters")
     .select("*")
-    .eq("class_id", class_id)
+    .eq("class_id", student.class_id)
     .eq("subject_id", subject_id);
 
   if (error) return res.status(500).json(error);
   res.json(data);
 });
+
+
 app.get("/notes", async (req, res) => {
   const { chapter_id } = req.query;
 
@@ -1568,6 +1613,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
