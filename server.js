@@ -1480,6 +1480,37 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
 });
 
 
+
+app.get("/student/subjects", async (req, res) => {
+  const { class_id } = req.query;
+
+  const { data, error } = await supabase
+    .from("class_subjects")
+    .select("subjects(subject_id, subject_name)")
+    .eq("class_id", class_id);
+
+  if (error) return res.status(500).json(error);
+
+  res.json(data.map(d => d.subjects));
+});
+
+/* ================= CHAPTERS + NOTES ================= */
+app.get("/student/chapters-with-notes", async (req, res) => {
+  const { class_id, subject_id } = req.query;
+
+  const { data, error } = await supabase.rpc(
+    "get_chapters_with_notes",
+    {
+      p_class_id: class_id,
+      p_subject_id: subject_id
+    }
+  );
+
+  if (error) return res.status(500).json(error);
+
+  res.json(data);
+});
+
 // =========================================================================
 //                         ADMIN PROFILE
 
@@ -1491,6 +1522,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
