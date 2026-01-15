@@ -1534,29 +1534,19 @@ app.get("/subjects", async (req, res) => {
 
 
 app.get("/chapters", async (req, res) => {
-  const { auth_id, subject_id } = req.query;
+  const { subject_id } = req.query;
 
-  if (!auth_id || !subject_id) {
-    return res.status(400).json({ message: "auth_id & subject_id required" });
-  }
-
-  const { data: student, error: studentError } = await supabase
-    .from("students")
-    .select("class_id")
-    .eq("auth_id", auth_id)
-    .single();
-
-  if (studentError || !student) {
-    return res.status(404).json({ message: "Student not found" });
+  if (!subject_id) {
+    return res.status(400).json({ message: "subject_id required" });
   }
 
   const { data, error } = await supabase
     .from("chapters")
     .select("*")
-    .eq("class_id", student.class_id)
     .eq("subject_id", subject_id);
 
   if (error) return res.status(500).json(error);
+
   res.json(data);
 });
 
@@ -1611,6 +1601,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
