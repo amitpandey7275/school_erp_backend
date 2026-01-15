@@ -1497,13 +1497,15 @@ app.get("/subjects", async (req, res) => {
   const { class_id } = req.query;
 
   const { data, error } = await supabase
-    .from("class_subject")
+    .from("class_subjects")   // ✅ FIXED
     .select("subjects(*)")
     .eq("class_id", class_id);
 
   if (error) return res.status(500).json(error);
+
   res.json(data.map(d => d.subjects));
 });
+
 app.get("/chapters", async (req, res) => {
   const { class_id, subject_id } = req.query;
 
@@ -1566,6 +1568,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
