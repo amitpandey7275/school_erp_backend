@@ -102,36 +102,7 @@ app.post("/get_role", async (req, res) => {
     }
 });
 
-const supabaseAuthMiddleware = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({ message: "No Authorization header" });
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    const { data, error } = await supabase.auth.getUser(token);
-
-    if (error || !data.user) {
-      return res.status(401).json({ message: "Invalid or expired token" });
-    }
-
-    // 🔥 YAHI SABSE IMPORTANT LINE
-    req.user = {
-      id: data.user.id   // 👈 supabase auth user id
-    };
-
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Auth failed" });
-  }
-};
-
-
-// 🔐 PROTECT STUDENT ROUTES
-app.use("/student", supabaseAuthMiddleware);
 
 // ----------------------- STUDENT PROFILE ----------------------------
 app.get("/api/student/profile/:auth_id", async (req, res) => {
@@ -1512,90 +1483,75 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
 });
 
 
-//.................notes.............
-app.get("/student/subjects", async (req, res) => {
-  try {
-    const studentId = req.user.id;
+//////////////////////////////////////////
+app.get("/classes", async (req, res) => {
+  const { data, error } = await supabase
+    .from("classes")
+    .select("*");
 
-    const { data: student, error: studentError } = await supabase
-      .from("students")
-      .select("class_id")
-      .eq("user_id", studentId)
-      .single();
-
-    if (studentError || !student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    const { data, error } = await supabase
-      .from("class_subject")
-      .select("subjects(*)")
-      .eq("class_id", student.class_id);
-
-    if (error) {
-      return res.status(500).json(error);
-    }
-
-    res.json(data.map(d => d.subjects));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  if (error) return res.status(500).json(error);
+  res.json(data);
 });
-app.get("/student/chapters", async (req, res) => {
-  try {
-    const { subject_id } = req.query;
-    const studentId = req.user.id;
 
-    if (!subject_id) {
-      return res.status(400).json({ message: "subject_id required" });
-    }
+app.get("/subjects", async (req, res) => {
+  const { class_id } = req.query;
 
-    const { data: student, error: studentError } = await supabase
-      .from("students")
-      .select("class_id")
-      .eq("user_id", studentId)
-      .single();
+  const { data, error } = await supabase
+    .from("class_subject")
+    .select("subjects(*)")
+    .eq("class_id", class_id);
 
-    if (studentError || !student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    const { data, error } = await supabase
-      .from("chapters")
-      .select("*")
-      .eq("class_id", student.class_id)
-      .eq("subject_id", subject_id);
-
-    if (error) {
-      return res.status(500).json(error);
-    }
-
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  if (error) return res.status(500).json(error);
+  res.json(data.map(d => d.subjects));
 });
-app.get("/student/notes", async (req, res) => {
-  try {
-    const { chapter_id } = req.query;
+app.get("/chapters", async (req, res) => {
+  const { class_id, subject_id } = req.query;
 
-    if (!chapter_id) {
-      return res.status(400).json({ message: "chapter_id required" });
-    }
+  const { data, error } = await supabase
+    .from("chapters")
+    .select("*")
+    .eq("class_id", class_id)
+    .eq("subject_id", subject_id);
 
-    const { data, error } = await supabase
-      .from("notes")
-      .select("*")
-      .eq("chapter_id", chapter_id);
+  if (error) return res.status(500).json(error);
+  res.json(data);
+});
+app.get("/notes", async (req, res) => {
+  const { chapter_id } = req.query;
 
-    if (error) {
-      return res.status(500).json(error);
-    }
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("chapter_id", chapter_id);
 
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  if (error) return res.status(500).json(error);
+  res.json(data);
+});
+app.post("/notes", upload.single("file"), async (req, res) => {
+  const {
+    class_id,
+    subject_id,
+    chapter_id,
+    title,
+    description
+  } = req.body;
+
+  // TEMP file url
+  const file_url = req.file
+    ? `/uploads/${req.file.originalname}`
+    : null;
+
+  const { error } = await supabase.from("notes").insert([{
+    class_id,
+    subject_id,
+    chapter_id,
+    title,
+    description,
+    file_url
+  }]);
+
+  if (error) return res.status(500).json(error);
+  res.json({ message: "Notes uploaded" });
 });
 
 
