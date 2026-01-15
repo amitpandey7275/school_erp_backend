@@ -1479,57 +1479,91 @@ app.post("/api/admin/bulk-fee", async (req, res) => {
   res.json({ message: "Bulk fee generated" });
 });
 
-//.................notes.................................
-router.get("/student/subjects", async (req, res) => {
-  const studentId = req.user.id;
 
-  const { data: student } = await supabase
-    .from("students")
-    .select("class_id")
-    .eq("user_id", studentId)
-    .single();
+//.................notes.............
+app.get("/student/subjects", async (req, res) => {
+  try {
+    const studentId = req.user.id;
 
-  const { data, error } = await supabase
-    .from("class_subject")
-    .select("subjects(*)")
-    .eq("class_id", student.class_id);
+    const { data: student, error: studentError } = await supabase
+      .from("students")
+      .select("class_id")
+      .eq("user_id", studentId)
+      .single();
 
-  if (error) return res.status(500).json(error);
+    if (studentError || !student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
 
-  res.json(data.map(d => d.subjects));
+    const { data, error } = await supabase
+      .from("class_subject")
+      .select("subjects(*)")
+      .eq("class_id", student.class_id);
+
+    if (error) {
+      return res.status(500).json(error);
+    }
+
+    res.json(data.map(d => d.subjects));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
+app.get("/student/chapters", async (req, res) => {
+  try {
+    const { subject_id } = req.query;
+    const studentId = req.user.id;
 
+    if (!subject_id) {
+      return res.status(400).json({ message: "subject_id required" });
+    }
 
-router.get("/student/chapters", async (req, res) => {
-  const { subject_id } = req.query;
-  const studentId = req.user.id;
+    const { data: student, error: studentError } = await supabase
+      .from("students")
+      .select("class_id")
+      .eq("user_id", studentId)
+      .single();
 
-  const { data: student } = await supabase
-    .from("students")
-    .select("class_id")
-    .eq("user_id", studentId)
-    .single();
+    if (studentError || !student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
 
-  const { data, error } = await supabase
-    .from("chapters")
-    .select("*")
-    .eq("class_id", student.class_id)
-    .eq("subject_id", subject_id);
+    const { data, error } = await supabase
+      .from("chapters")
+      .select("*")
+      .eq("class_id", student.class_id)
+      .eq("subject_id", subject_id);
 
-  if (error) return res.status(500).json(error);
-  res.json(data);
+    if (error) {
+      return res.status(500).json(error);
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
+app.get("/student/notes", async (req, res) => {
+  try {
+    const { chapter_id } = req.query;
 
-router.get("/student/notes", async (req, res) => {
-  const { chapter_id } = req.query;
+    if (!chapter_id) {
+      return res.status(400).json({ message: "chapter_id required" });
+    }
 
-  const { data, error } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("chapter_id", chapter_id);
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("chapter_id", chapter_id);
 
-  if (error) return res.status(500).json(error);
-  res.json(data);
+    if (error) {
+      return res.status(500).json(error);
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 
@@ -1544,6 +1578,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
