@@ -1536,10 +1536,13 @@ app.get("/subjects", async (req, res) => {
 app.get("/chapters", async (req, res) => {
   const { auth_id, subject_id } = req.query;
 
+  console.log("CHAPTER API HIT", { auth_id, subject_id });
+
   if (!auth_id || !subject_id) {
     return res.status(400).json({ message: "auth_id & subject_id required" });
   }
 
+  // student nikaalo
   const { data: student, error: studentError } = await supabase
     .from("students")
     .select("class_id")
@@ -1547,16 +1550,26 @@ app.get("/chapters", async (req, res) => {
     .single();
 
   if (studentError || !student) {
-    return res.status(404).json({ message: "Student not found" });
+    console.log("STUDENT NOT FOUND", studentError);
+    return res.json([]); // IMPORTANT
   }
 
+  console.log("STUDENT CLASS:", student.class_id);
+
+  // chapters nikaalo
   const { data, error } = await supabase
     .from("chapters")
-    .select("*")
+    .select("chapter_id, chapter_name, chapter_number")
     .eq("subject_id", subject_id)
-    .eq("class_id", student.class_id);
+    .eq("class_id", student.class_id)
+    .order("chapter_number");
 
-  if (error) return res.status(500).json(error);
+  if (error) {
+    console.log("CHAPTER ERROR", error);
+    return res.json([]);
+  }
+
+  console.log("CHAPTER COUNT:", data.length);
 
   res.json(data);
 });
@@ -1612,6 +1625,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
