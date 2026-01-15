@@ -72,6 +72,8 @@ app.post("/login", async (req, res) => {
     }
 });
 
+
+
 // ----------------------- GET ROLE ----------------------------
 // ----------------------- GET ROLE ----------------------------
 app.post("/get_role", async (req, res) => {
@@ -100,6 +102,36 @@ app.post("/get_role", async (req, res) => {
     }
 });
 
+const supabaseAuthMiddleware = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ message: "No Authorization header" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data.user) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    // 🔥 YAHI SABSE IMPORTANT LINE
+    req.user = {
+      id: data.user.id   // 👈 supabase auth user id
+    };
+
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Auth failed" });
+  }
+};
+
+
+// 🔐 PROTECT STUDENT ROUTES
+app.use("/student", supabaseAuthMiddleware);
 
 // ----------------------- STUDENT PROFILE ----------------------------
 app.get("/api/student/profile/:auth_id", async (req, res) => {
@@ -1578,6 +1610,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
 
 
